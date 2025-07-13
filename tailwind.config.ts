@@ -52,6 +52,22 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				// Mystical AI Kafetzou Colors
+				'mystical-purple': {
+					DEFAULT: 'hsl(var(--mystical-purple))',
+					light: 'hsl(var(--mystical-purple-light))',
+					dark: 'hsl(var(--mystical-purple-dark))'
+				},
+				'rose-gold': {
+					DEFAULT: 'hsl(var(--rose-gold))',
+					light: 'hsl(var(--rose-gold-light))'
+				},
+				'golden': {
+					DEFAULT: 'hsl(var(--golden))',
+					light: 'hsl(var(--golden-light))'
+				},
+				'lavender': 'hsl(var(--lavender))',
+				'soft-pink': 'hsl(var(--soft-pink))',
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -67,6 +83,20 @@ export default {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
+			},
+			backgroundImage: {
+				'gradient-mystical': 'var(--gradient-mystical)',
+				'gradient-golden': 'var(--gradient-golden)',
+				'gradient-soft': 'var(--gradient-soft)'
+			},
+			boxShadow: {
+				'mystical': 'var(--shadow-mystical)',
+				'golden': 'var(--shadow-golden)',
+				'soft': 'var(--shadow-soft)'
+			},
+			fontFamily: {
+				'mystical': ['Playfair Display', 'serif'],
+				'elegant': ['Inter', 'sans-serif']
 			},
 			keyframes: {
 				'accordion-down': {
@@ -84,11 +114,31 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'mystical-glow': {
+					'0%, 100%': {
+						opacity: '1',
+						transform: 'scale(1)'
+					},
+					'50%': {
+						opacity: '0.8',
+						transform: 'scale(1.05)'
+					}
+				},
+				'float': {
+					'0%, 100%': {
+						transform: 'translateY(0px)'
+					},
+					'50%': {
+						transform: 'translateY(-10px)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'mystical-glow': 'mystical-glow 3s ease-in-out infinite',
+				'float': 'float 6s ease-in-out infinite'
 			}
 		}
 	},

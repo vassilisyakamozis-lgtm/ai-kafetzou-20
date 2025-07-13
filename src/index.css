@@ -2,41 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* AI Kafetzou Design System - Mystical & Feminine */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Mystical Background */
+    --background: 330 25% 96%;
+    --foreground: 320 15% 15%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Card & Popover */
+    --card: 330 30% 98%;
+    --card-foreground: 320 15% 15%;
+    --popover: 330 30% 98%;
+    --popover-foreground: 320 15% 15%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    /* Primary - Mystical Purple */
+    --primary: 280 60% 50%;
+    --primary-foreground: 330 25% 96%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Secondary - Rose Gold */
+    --secondary: 350 50% 85%;
+    --secondary-foreground: 320 40% 25%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Muted - Soft Lavender */
+    --muted: 320 20% 90%;
+    --muted-foreground: 320 15% 50%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Accent - Golden */
+    --accent: 45 90% 70%;
+    --accent-foreground: 320 40% 25%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
+    /* Destructive */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Border & Input */
+    --border: 320 25% 88%;
+    --input: 320 25% 92%;
+    --ring: 280 60% 50%;
 
-    --radius: 0.5rem;
+    /* Custom Mystical Colors */
+    --mystical-purple: 280 60% 50%;
+    --mystical-purple-light: 280 40% 70%;
+    --mystical-purple-dark: 280 70% 35%;
+    --rose-gold: 350 50% 75%;
+    --rose-gold-light: 350 40% 85%;
+    --golden: 45 90% 70%;
+    --golden-light: 45 80% 80%;
+    --lavender: 270 30% 85%;
+    --soft-pink: 330 40% 90%;
+
+    /* Gradients */
+    --gradient-mystical: linear-gradient(135deg, hsl(280 60% 50%), hsl(320 50% 60%));
+    --gradient-golden: linear-gradient(135deg, hsl(45 90% 70%), hsl(350 50% 75%));
+    --gradient-soft: linear-gradient(180deg, hsl(330 25% 96%), hsl(320 20% 90%));
+
+    /* Shadows */
+    --shadow-mystical: 0 10px 30px -10px hsl(280 60% 50% / 0.3);
+    --shadow-golden: 0 8px 25px -8px hsl(45 90% 70% / 0.4);
+    --shadow-soft: 0 4px 15px -4px hsl(320 30% 60% / 0.2);
+
+    /* Border Radius */
+    --radius: 1rem;
 
     --sidebar-background: 0 0% 98%;
 
