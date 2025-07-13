@@ -9,8 +9,8 @@ const ReadersSection = () => {
       name: "Νεαρή Μάντισσα",
       title: "Young Oracle",
       age: "25 years",
-      specialty: "Love & New Beginnings",
-      description: "Fresh insights with youthful optimism. Perfect for new relationships, career changes, and creative endeavors.",
+      specialty: "Αγάπη & Νέες Αρχές",
+      description: "Φρέσκιες προβλέψεις με νεανική αισιοδοξία. Ιδανική για νέες σχέσεις, αλλαγές καριέρας και δημιουργικές προσπάθειες.",
       icon: Heart,
       gradient: "from-rose-gold to-soft-pink",
       shadow: "shadow-rose-gold-light"
@@ -20,8 +20,8 @@ const ReadersSection = () => {
       name: "Έμπειρη Καφετζού",
       title: "Experienced Reader",
       age: "45 years", 
-      specialty: "Life Balance & Wisdom",
-      description: "Balanced perspective with life experience. Ideal for family matters, professional guidance, and personal growth.",
+      specialty: "Ισορροπία Ζωής & Σοφία",
+      description: "Ισορροπημένη οπτική με εμπειρία ζωής. Ιδανική για οικογενειακά θέματα, επαγγελματική καθοδήγηση και προσωπική ανάπτυξη.",
       icon: Crown,
       gradient: "from-mystical-purple to-mystical-purple-light",
       shadow: "shadow-mystical"
@@ -31,8 +31,8 @@ const ReadersSection = () => {
       name: "Σοφή Γιαγιά",
       title: "Wise Grandmother",
       age: "70 years",
-      specialty: "Deep Wisdom & Fate",
-      description: "Ancient wisdom and profound insights. Best for major life decisions, spiritual guidance, and understanding destiny.",
+      specialty: "Βαθιά Σοφία & Μοίρα",
+      description: "Αρχαία σοφία και βαθιές προβλέψεις. Καλύτερη για σημαντικές αποφάσεις ζωής, πνευματική καθοδήγηση και κατανόηση του πεπρωμένου.",
       icon: Sparkles,
       gradient: "from-golden to-golden-light",
       shadow: "shadow-golden"
@@ -50,10 +50,10 @@ const ReadersSection = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-mystical font-bold text-mystical-purple mb-6">
-            Choose Your Mystical Reader
+            Διάλεξε την Μυστική σου Καφετζού
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Each reader brings their unique perspective and wisdom to interpret the sacred symbols in your coffee cup.
+            Κάθε καφετζού φέρνει την μοναδική της οπτική και σοφία για να ερμηνεύσει τα ιερά σύμβολα στο φλιτζάνι σου.
           </p>
         </div>
 
@@ -91,7 +91,7 @@ const ReadersSection = () => {
                 <CardContent className="text-center space-y-4 relative z-10">
                   <div className="bg-mystical-purple/10 rounded-xl p-3 mb-4">
                     <p className="text-sm font-medium text-mystical-purple">
-                      Specialty: {reader.specialty}
+                      Ειδικότητα: {reader.specialty}
                     </p>
                   </div>
                   
@@ -104,7 +104,7 @@ const ReadersSection = () => {
                     size="sm" 
                     className="w-full mt-6 hover:bg-mystical-purple/10 hover:border-mystical-purple/50"
                   >
-                    Choose {reader.name.split(' ')[0]}
+                    Διάλεξε {reader.name.split(' ')[0]}
                   </Button>
                 </CardContent>
               </Card>
@@ -114,11 +114,11 @@ const ReadersSection = () => {
 
         <div className="text-center mt-12">
           <p className="text-sm text-muted-foreground mb-6">
-            Don't worry - you can always change readers between readings
+            Μην ανησυχείς - μπορείς πάντα να αλλάξεις καφετζού ανάμεσα στις αναγνώσεις
           </p>
           <Button variant="mystical" size="lg">
             <Sparkles className="mr-2 h-5 w-5" />
-            Start Your First Reading
+            Ξεκίνα την Πρώτη σου Ανάγνωση
           </Button>
         </div>
       </div>

@@ -21,25 +21,25 @@ const Footer = () => {
               </div>
             </div>
             <p className="text-white/70 leading-relaxed max-w-md">
-              Discover your destiny through the ancient art of coffee reading, enhanced by modern AI technology. 
-              Let our mystical readers guide you on your spiritual journey.
+              Ανακάλυψε τη μοίρα σου μέσα από την αρχαία τέχνη της καφετζούς, ενισχυμένη από σύγχρονη τεχνολογία AI. 
+              Άσε τις μυστικές μας καφετζούδες να σε καθοδηγήσουν στο πνευματικό σου ταξίδι.
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-lg font-semibold mb-4 text-golden">Quick Links</h4>
+            <h4 className="text-lg font-semibold mb-4 text-golden">Γρήγοροι Σύνδεσμοι</h4>
             <ul className="space-y-2">
-              <li><a href="#features" className="text-white/70 hover:text-white transition-colors">Features</a></li>
-              <li><a href="#readers" className="text-white/70 hover:text-white transition-colors">Readers</a></li>
-              <li><a href="#pricing" className="text-white/70 hover:text-white transition-colors">Pricing</a></li>
+              <li><a href="#features" className="text-white/70 hover:text-white transition-colors">Χαρακτηριστικά</a></li>
+              <li><a href="#readers" className="text-white/70 hover:text-white transition-colors">Καφετζούδες</a></li>
+              <li><a href="#pricing" className="text-white/70 hover:text-white transition-colors">Τιμές</a></li>
               <li><a href="#" className="text-white/70 hover:text-white transition-colors">Blog</a></li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h4 className="text-lg font-semibold mb-4 text-golden">Contact</h4>
+            <h4 className="text-lg font-semibold mb-4 text-golden">Επικοινωνία</h4>
             <ul className="space-y-3">
               <li className="flex items-center space-x-2">
                 <Mail className="h-4 w-4 text-white/70" />
@@ -59,12 +59,12 @@ const Footer = () => {
             © 2024 AI Kafetzou. All rights reserved.
           </p>
           <div className="flex items-center space-x-6 mt-4 md:mt-0">
-            <a href="#" className="text-white/60 hover:text-white text-sm transition-colors">Privacy Policy</a>
-            <a href="#" className="text-white/60 hover:text-white text-sm transition-colors">Terms of Service</a>
+            <a href="#" className="text-white/60 hover:text-white text-sm transition-colors">Πολιτική Απορρήτου</a>
+            <a href="#" className="text-white/60 hover:text-white text-sm transition-colors">Όροι Χρήσης</a>
             <div className="flex items-center space-x-1 text-white/60 text-sm">
-              <span>Made with</span>
+              <span>Φτιαγμένο με</span>
               <Heart className="h-3 w-3 text-rose-gold fill-current" />
-              <span>in Athens</span>
+              <span>στην Αθήνα</span>
             </div>
           </div>
         </div>

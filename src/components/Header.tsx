@@ -23,23 +23,23 @@ const Header = () => {
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             <a href="#features" className="text-foreground hover:text-mystical-purple transition-colors">
-              Features
+              Χαρακτηριστικά
             </a>
             <a href="#readers" className="text-foreground hover:text-mystical-purple transition-colors">
-              Readers
+              Καφετζούδες
             </a>
             <a href="#pricing" className="text-foreground hover:text-mystical-purple transition-colors">
-              Pricing
+              Τιμές
             </a>
           </nav>
 
           {/* Auth Buttons */}
           <div className="flex items-center space-x-3">
             <Button variant="ghost" size="sm">
-              Sign In
+              Σύνδεση
             </Button>
             <Button variant="mystical" size="sm">
-              Get Started
+              Εγγραφή
             </Button>
           </div>
         </div>

@@ -7,51 +7,51 @@ const PricingSection = () => {
     {
       name: "Daily Oracle",
       price: "€9.99",
-      period: "/month",
-      description: "Perfect for daily mystical guidance",
+      period: "/μήνα",
+      description: "Ιδανικό για καθημερινή μυστική καθοδήγηση",
       icon: Star,
       gradient: "from-rose-gold to-soft-pink",
       popular: false,
       features: [
-        "Daily coffee readings",
-        "Choose any reader",
-        "Audio predictions",
-        "Reading history",
-        "Basic categories"
+        "Καθημερινές αναγνώσεις καφέ",
+        "Διάλεξε οποιαδήποτε καφετζού",
+        "Ηχητικές προβλέψεις",
+        "Ιστορικό αναγνώσεων",
+        "Βασικές κατηγορίες"
       ]
     },
     {
       name: "The Third Eye Opens", 
       price: "€19.99",
-      period: "/month",
-      description: "For those seeking deeper wisdom",
+      period: "/μήνα",
+      description: "Για όσους αναζητούν βαθύτερη σοφία",
       icon: Crown,
       gradient: "from-mystical-purple to-mystical-purple-light",
       popular: true,
       features: [
-        "Unlimited readings",
-        "All 3 mystical readers",
-        "Personalized questions",
-        "Premium audio voices",
-        "PDF exports",
-        "All categories",
-        "Priority support"
+        "Απεριόριστες αναγνώσεις",
+        "Και οι 3 μυστικές καφετζούδες",
+        "Προσωποποιημένες ερωτήσεις",
+        "Premium ηχητικές φωνές",
+        "Εξαγωγή PDF",
+        "Όλες οι κατηγορίες",
+        "Προτεραιότητα υποστήριξης"
       ]
     },
     {
-      name: "Free Trial",
+      name: "Δωρεάν Δοκιμή",
       price: "€0",
-      period: "/7 days",
-      description: "Discover your mystical journey",
+      period: "/7 ημέρες",
+      description: "Ανακάλυψε το μυστικό σου ταξίδι",
       icon: Sparkles,
       gradient: "from-golden to-golden-light",
       popular: false,
       features: [
-        "7 free readings",
-        "Try all readers",
-        "Basic audio",
-        "Limited history",
-        "1 personalized question"
+        "7 δωρεάν αναγνώσεις",
+        "Δοκίμασε όλες τις καφετζούδες",
+        "Βασικός ήχος",
+        "Περιορισμένο ιστορικό",
+        "1 προσωποποιημένη ερώτηση"
       ]
     }
   ];
@@ -67,10 +67,10 @@ const PricingSection = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-mystical font-bold text-mystical-purple mb-6">
-            Choose Your Mystical Path
+            Διάλεξε το Μυστικό σου Μονοπάτι
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Start your journey with our free trial, then select the plan that resonates with your soul
+            Ξεκίνα το ταξίδι σου με τη δωρεάν δοκιμή, μετά διάλεξε το πλάνο που αντηχεί στην ψυχή σου
           </p>
         </div>
 
@@ -90,7 +90,7 @@ const PricingSection = () => {
                 {plan.popular && (
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                     <div className="bg-gradient-mystical text-white px-4 py-1 rounded-full text-xs font-bold shadow-mystical">
-                      MOST POPULAR
+                      ΔΗΜΟΦΙΛΕΣΤΕΡΟ
                     </div>
                   </div>
                 )}
@@ -133,7 +133,7 @@ const PricingSection = () => {
                     size="lg" 
                     className="w-full"
                   >
-                    {plan.price === "€0" ? "Start Free Trial" : "Choose Plan"}
+                    {plan.price === "€0" ? "Ξεκίνα Δωρεάν Δοκιμή" : "Διάλεξε Πλάνο"}
                   </Button>
                 </CardContent>
               </Card>
@@ -143,10 +143,10 @@ const PricingSection = () => {
 
         <div className="text-center mt-12">
           <p className="text-sm text-muted-foreground mb-4">
-            All plans include secure payment processing and can be cancelled anytime
+            Όλα τα πλάνα περιλαμβάνουν ασφαλή επεξεργασία πληρωμών και μπορούν να ακυρωθούν ανά πάσα στιγμή
           </p>
           <p className="text-xs text-muted-foreground">
-            ✨ No hidden fees • 💫 Instant access • 🔮 Cancel anytime
+            ✨ Χωρίς κρυφές χρεώσεις • 💫 Άμεση πρόσβαση • 🔮 Ακύρωση ανά πάσα στιγμή
           </p>
         </div>
       </div>

@@ -5,38 +5,38 @@ const FeaturesSection = () => {
   const features = [
     {
       icon: Camera,
-      title: "Upload Your Cup",
-      description: "Simply take a photo of your finished coffee cup and let our AI analyze the mystical patterns.",
+      title: "Ανέβασε το Φλιτζάνι σου",
+      description: "Απλά βγάλε μια φωτογραφία του φλιτζανιού σου και άσε την AI να αναλύσει τα μυστικά σχήματα.",
       color: "text-rose-gold"
     },
     {
       icon: Brain,
-      title: "AI Vision Analysis",
-      description: "Advanced AI technology recognizes symbols, shapes, and patterns in your coffee grounds with mystical precision.",
+      title: "Ανάλυση με AI Vision",
+      description: "Προηγμένη τεχνολογία AI αναγνωρίζει σύμβολα, σχήματα και μοτίβα στα κατακάθια με μυστική ακρίβεια.",
       color: "text-mystical-purple"
     },
     {
       icon: Eye,
-      title: "Choose Your Reader",
-      description: "Select from three unique personas - each with their own wisdom, perspective, and reading style.",
+      title: "Διάλεξε την Καφετζού σου",
+      description: "Επίλεξε από τρεις μοναδικές προσωπικότητες - καθεμία με τη δική της σοφία και στυλ ανάγνωσης.",
       color: "text-golden"
     },
     {
       icon: Volume2,
-      title: "Audio Predictions",
-      description: "Listen to your personalized reading with voice that matches your chosen mystical reader's personality.",
+      title: "Ηχητικές Προβλέψεις",
+      description: "Άκουσε την προσωπική σου ανάγνωση με φωνή που ταιριάζει στην επιλεγμένη καφετζού σου.",
       color: "text-mystical-purple-light"
     },
     {
       icon: History,
-      title: "Reading History",
-      description: "Keep track of all your readings, export to PDF, and watch your mystical journey unfold over time.",
+      title: "Ιστορικό Αναγνώσεων",
+      description: "Κράτα αρχείο όλων των αναγνώσεών σου, εξάγαγε σε PDF και παρακολούθησε το μυστικό σου ταξίδι.",
       color: "text-rose-gold"
     },
     {
       icon: Sparkles,
-      title: "Personalized Insights",
-      description: "Get readings tailored to love, career, family, or fortune based on your current life situation.",
+      title: "Εξατομικευμένες Προβλέψεις",
+      description: "Λάβε αναγνώσεις προσαρμοσμένες στην αγάπη, καριέρα, οικογένεια ή τύχη σου.",
       color: "text-golden"
     }
   ];
@@ -53,10 +53,10 @@ const FeaturesSection = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-mystical font-bold text-mystical-purple mb-6">
-            Ancient Wisdom Meets Modern AI
+            Αρχαία Σοφία Συναντά Σύγχρονη AI
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Experience the mystical art of coffee reading enhanced by cutting-edge artificial intelligence
+            Ζήσε την μυστική τέχνη της καφετζούς ενισχυμένη από προηγμένη τεχνητή νοημοσύνη
           </p>
         </div>
 
