@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Crown, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Header = () => {
   return (
@@ -28,6 +29,9 @@ const Header = () => {
             <a href="#readers" className="text-foreground hover:text-mystical-purple transition-colors">
               Καφετζούδες
             </a>
+            <Link to="/cup" className="text-foreground hover:text-mystical-purple transition-colors">
+              Φλιτζάνι
+            </Link>
             <a href="#pricing" className="text-foreground hover:text-mystical-purple transition-colors">
               Τιμές
             </a>
