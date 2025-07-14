@@ -36,8 +36,8 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to generate speech');
+      console.error('OpenAI TTS API error:', response.status, await response.text());
+      throw new Error(`OpenAI TTS failed: ${response.status}`);
     }
 
     // Convert audio buffer to base64
