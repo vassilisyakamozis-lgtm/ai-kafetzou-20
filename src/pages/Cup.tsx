@@ -107,18 +107,10 @@ const Cup = () => {
     setIsLoading(true);
     
     try {
-      // TODO: Implement OpenAI API call here
-      console.log("Form data:", { ...data, image: selectedImage });
-      
-      toast({
-        title: "Επιτυχία!",
-        description: "Η ανάγνωση του φλιτζανιού σας ετοιμάζεται...",
-      });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await getCupReading(data, selectedImage);
       
     } catch (error) {
+      console.error("Error getting cup reading:", error);
       toast({
         title: "Σφάλμα",
         description: "Κάτι πήγε στραβά. Παρακαλώ δοκιμάστε ξανά.",
@@ -126,6 +118,84 @@ const Cup = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const getCupReading = async (formData: CupReadingForm, imageFile: File) => {
+    // Convert image to base64
+    const imageBase64 = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string);
+      reader.readAsDataURL(imageFile);
+    });
+
+    const selectedReader = readers.find(r => r.id === formData.reader);
+    
+    const prompt = `Είσαι μια ${selectedReader?.name.toLowerCase()} που διαβάζει φλιτζάνια καφέ. 
+    Κοίταξε την εικόνα του φλιτζανιού και δώσε μια μυστικιστική και λεπτομερή ανάγνωση.
+    
+    Στοιχεία για την ανάγνωση:
+    - Τομέας ενδιαφέροντος: ${formData.category}
+    - Συναισθηματική κατάσταση: ${formData.mood}
+    ${formData.question ? `- Ερώτηση: ${formData.question}` : ''}
+    
+    Δώσε την ανάγνωση σε στυλ ${selectedReader?.description.toLowerCase()}.
+    Απάντησε στα ελληνικά με τον τόνο που ταιριάζει στην επιλεγμένη καφετζού.
+    Κάνε την ανάγνωση προσωπική και εμπνευσμένη, χρησιμοποιώντας τα σχήματα που βλέπεις στον καφέ.`;
+
+    // For now, we'll need an API key input from the user
+    const apiKey = window.prompt("Παρακαλώ εισάγετε το OpenAI API key σας για να συνεχίσετε:");
+    
+    if (!apiKey) {
+      throw new Error("Απαιτείται API key για την ανάγνωση");
+    }
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: prompt
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: imageBase64
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.8
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Σφάλμα API: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const reading = result.choices[0]?.message?.content;
+
+    if (reading) {
+      // Show the reading result
+      toast({
+        title: "Ο χρησμός σας είναι έτοιμος!",
+        description: "Δείτε την ανάγνωση του φλιτζανιού σας παρακάτω.",
+      });
+      
+      // You can display the reading result here - for now just alert
+      alert(`Χρησμός από ${selectedReader?.name}:\n\n${reading}`);
     }
   };
 
