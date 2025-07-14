@@ -12,6 +12,8 @@ import { Crown, Heart, Sparkles, Upload, Coffee, ArrowLeft } from "lucide-react"
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import CupReadingResult from "@/components/CupReadingResult";
+import CupReadingLoader from "@/components/CupReadingLoader";
 
 interface CupReadingForm {
   reader: string;
@@ -26,6 +28,8 @@ const Cup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [readingResult, setReadingResult] = useState<string | null>(null);
+  const [selectedReader, setSelectedReader] = useState<{id: string, name: string, description: string} | null>(null);
 
   const form = useForm<CupReadingForm>({
     defaultValues: {
@@ -106,10 +110,14 @@ const Cup = () => {
     }
 
     setIsLoading(true);
+    const readerInfo = readers.find(r => r.id === data.reader);
+    setSelectedReader(readerInfo || null);
     
     try {
-      await getCupReading(data, selectedImage);
-      
+      const result = await getCupReading(data, selectedImage);
+      if (result) {
+        setReadingResult(result);
+      }
     } catch (error) {
       console.error("Error getting cup reading:", error);
       toast({
@@ -122,7 +130,7 @@ const Cup = () => {
     }
   };
 
-  const getCupReading = async (formData: CupReadingForm, imageFile: File) => {
+  const getCupReading = async (formData: CupReadingForm, imageFile: File): Promise<string | null> => {
     // Convert image to base64
     const imageBase64 = await new Promise<string>((resolve) => {
       const reader = new FileReader();
@@ -134,12 +142,12 @@ const Cup = () => {
       reader.readAsDataURL(imageFile);
     });
 
-    const selectedReader = readers.find(r => r.id === formData.reader);
+    const readerName = readers.find(r => r.id === formData.reader)?.name || 'Καφετζού';
 
     try {
       const { data, error } = await supabase.functions.invoke('cup-reading', {
         body: {
-          reader: formData.reader,
+          reader: readerName,
           category: formData.category,
           mood: formData.mood,
           question: formData.question,
@@ -158,20 +166,51 @@ const Cup = () => {
       }
 
       if (data.reading) {
-        // Show the reading result
         toast({
           title: "Ο χρησμός σας είναι έτοιμος!",
-          description: "Δείτε την ανάγνωση του φλιτζανιού σας παρακάτω.",
+          description: "Δείτε την ανάγνωση του φλιτζανιού σας.",
         });
-        
-        // Display the reading result
-        alert(`Χρησμός από ${selectedReader?.name}:\n\n${data.reading}`);
+        return data.reading;
       }
+
+      return null;
     } catch (error) {
       console.error('Error getting cup reading:', error);
       throw error;
     }
   };
+
+  const handleBackToForm = () => {
+    setReadingResult(null);
+    setSelectedReader(null);
+    form.reset();
+    setSelectedImage(null);
+    setImagePreview(null);
+  };
+
+  const handleSaveReading = async (reading: string) => {
+    // TODO: Implement saving to user's dashboard when authentication is ready
+    // For now, just show a placeholder message
+    console.log('Saving reading:', reading);
+    throw new Error('Η αποθήκευση θα είναι διαθέσιμη μόλις δημιουργήσουμε το σύστημα χρηστών.');
+  };
+
+  // Show loading screen
+  if (isLoading && selectedReader) {
+    return <CupReadingLoader readerName={selectedReader.name} />;
+  }
+
+  // Show reading result
+  if (readingResult && selectedReader) {
+    return (
+      <CupReadingResult
+        reading={readingResult}
+        readerInfo={selectedReader}
+        onBack={handleBackToForm}
+        onSave={handleSaveReading}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

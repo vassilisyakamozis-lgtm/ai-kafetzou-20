@@ -138,7 +138,9 @@ export default {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'mystical-glow': 'mystical-glow 3s ease-in-out infinite',
-				'float': 'float 6s ease-in-out infinite'
+				'float': 'float 6s ease-in-out infinite',
+				'spin-slow': 'spin 3s linear infinite',
+				'spin-reverse': 'spin 2s linear infinite reverse'
 			}
 		}
 	},
