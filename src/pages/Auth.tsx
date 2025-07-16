@@ -30,13 +30,19 @@ export default function Auth() {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
+      console.log('Auth event:', event, 'Session:', session);
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('User signed in successfully');
+        toast({
+          title: "Επιτυχής σύνδεση!",
+          description: "Καλώς ήρθατε!",
+        });
         navigate('/');
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
