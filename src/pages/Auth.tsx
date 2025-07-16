@@ -110,18 +110,33 @@ export default function Auth() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent'
-          }
-        }
-      });
+      // Open Google OAuth in a new window to bypass iframe restrictions
+      const authUrl = `https://tpixtlnlimqnlldnrbal.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(window.location.origin + '/')}&access_type=offline&prompt=consent`;
+      
+      const popup = window.open(authUrl, 'google-auth', 'width=500,height=600,scrollbars=yes,resizable=yes');
+      
+      if (!popup) {
+        throw new Error('Popup blocked. Please allow popups for this site.');
+      }
 
-      if (error) throw error;
+      // Listen for the popup to close (user completed auth)
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosed);
+          // Check for session after popup closes
+          setTimeout(async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+              toast({
+                title: "Επιτυχής σύνδεση!",
+                description: "Καλώς ήρθατε!",
+              });
+              navigate('/');
+            }
+          }, 1000);
+        }
+      }, 1000);
+
     } catch (error: any) {
       toast({
         title: "Σφάλμα Google σύνδεσης",
