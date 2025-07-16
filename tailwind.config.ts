@@ -127,10 +127,41 @@ export default {
 				},
 				'float': {
 					'0%, 100%': {
-						transform: 'translateY(0px)'
+						transform: 'translateY(0px) rotate(0deg)'
+					},
+					'25%': {
+						transform: 'translateY(-15px) rotate(5deg)'
 					},
 					'50%': {
-						transform: 'translateY(-10px)'
+						transform: 'translateY(-10px) rotate(-5deg)'
+					},
+					'75%': {
+						transform: 'translateY(-15px) rotate(3deg)'
+					}
+				},
+				'float-intense': {
+					'0%, 100%': {
+						transform: 'translateY(0px) translateX(0px) rotate(0deg) scale(1)'
+					},
+					'25%': {
+						transform: 'translateY(-20px) translateX(-5px) rotate(10deg) scale(1.1)'
+					},
+					'50%': {
+						transform: 'translateY(-15px) translateX(5px) rotate(-10deg) scale(0.9)'
+					},
+					'75%': {
+						transform: 'translateY(-25px) translateX(-3px) rotate(15deg) scale(1.05)'
+					}
+				},
+				'drift': {
+					'0%, 100%': {
+						transform: 'translate(0px, 0px) rotate(0deg)'
+					},
+					'33%': {
+						transform: 'translate(10px, -10px) rotate(120deg)'
+					},
+					'66%': {
+						transform: 'translate(-10px, 5px) rotate(240deg)'
 					}
 				}
 			},
@@ -139,6 +170,8 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'mystical-glow': 'mystical-glow 3s ease-in-out infinite',
 				'float': 'float 6s ease-in-out infinite',
+				'float-intense': 'float-intense 4s ease-in-out infinite',
+				'drift': 'drift 8s ease-in-out infinite',
 				'spin-slow': 'spin 3s linear infinite',
 				'spin-reverse': 'spin 2s linear infinite reverse'
 			}

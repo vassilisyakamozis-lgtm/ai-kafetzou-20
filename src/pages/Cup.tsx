@@ -44,23 +44,26 @@ const Cup = () => {
   const readers = [
     {
       id: "young",
-      name: "Νεαρή Μάντισσα",
+      name: "Ρένα η μοντέρνα",
       description: "Φρέσκιες προβλέψεις με νεανική αισιοδοξία",
       icon: Heart,
+      image: "src/assets/rena-modern.jpg",
       gradient: "from-rose-gold to-soft-pink"
     },
     {
       id: "experienced",
-      name: "Έμπειρη Καφετζού", 
+      name: "Κατίνα η Σμυρνιά", 
       description: "Ισορροπημένη οπτική με εμπειρία ζωής",
       icon: Crown,
+      image: "src/assets/katina-smyrnia.jpg",
       gradient: "from-mystical-purple to-mystical-purple-light"
     },
     {
       id: "wise",
-      name: "Σοφή Γιαγιά",
+      name: "Ισισδώρα η πνευματική",
       description: "Αρχαία σοφία και βαθιές προβλέψεις",
       icon: Sparkles,
+      image: "src/assets/isisdora-spiritual.jpg",
       gradient: "from-golden to-golden-light"
     }
   ];
@@ -272,16 +275,24 @@ const Cup = () => {
                                     id={reader.id}
                                     className="peer sr-only"
                                   />
-                                  <Label
-                                    htmlFor={reader.id}
-                                    className="flex flex-col items-center p-4 border-2 border-mystical-purple/20 rounded-xl cursor-pointer hover:border-mystical-purple/40 peer-checked:border-mystical-purple peer-checked:bg-mystical-purple/5 transition-all"
-                                  >
-                                    <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${reader.gradient} flex items-center justify-center mb-3`}>
-                                      <IconComponent className="h-8 w-8 text-white" />
-                                    </div>
-                                    <h3 className="font-medium text-mystical-purple text-center">{reader.name}</h3>
-                                    <p className="text-sm text-muted-foreground text-center mt-1">{reader.description}</p>
-                                  </Label>
+                                   <Label
+                                     htmlFor={reader.id}
+                                     className="flex flex-col items-center p-4 border-2 border-mystical-purple/20 rounded-xl cursor-pointer hover:border-mystical-purple/40 peer-checked:border-mystical-purple peer-checked:bg-mystical-purple/5 transition-all"
+                                   >
+                                     <div className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-mystical-purple/30 mb-3 animate-mystical-glow">
+                                       <img 
+                                         src={reader.image} 
+                                         alt={reader.name}
+                                         className="w-full h-full object-cover"
+                                       />
+                                       <div className={`absolute inset-0 bg-gradient-to-br ${reader.gradient} opacity-20`}></div>
+                                       <div className="absolute inset-0 flex items-center justify-center">
+                                         <IconComponent className="h-6 w-6 text-white drop-shadow-lg" />
+                                       </div>
+                                     </div>
+                                     <h3 className="font-medium text-mystical-purple text-center">{reader.name}</h3>
+                                     <p className="text-sm text-muted-foreground text-center mt-1">{reader.description}</p>
+                                   </Label>
                                 </div>
                               );
                             })}

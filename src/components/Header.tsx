@@ -3,6 +3,7 @@ import { Crown, Sparkles, LogOut, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import logoIcon from "@/assets/logo-icon.png";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,8 +23,7 @@ const Header = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3">
             <div className="relative">
-              <Crown className="h-8 w-8 text-mystical-purple animate-mystical-glow" />
-              <Sparkles className="h-4 w-4 text-golden absolute -top-1 -right-1 animate-float" />
+              <img src="/lovable-uploads/bb07a43a-7bc4-4220-b603-524ea88d69e1.png" alt="Ai Kafetzou" className="h-8 w-8 animate-mystical-glow" />
             </div>
             <div>
               <h1 className="text-xl font-mystical font-bold text-mystical-purple">
