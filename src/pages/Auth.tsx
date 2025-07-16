@@ -107,7 +107,7 @@ export default function Auth() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`
+          redirectTo: 'https://485925b4-4b7a-43a7-942e-50f2e4195898.lovableproject.com/'
         }
       });
 
