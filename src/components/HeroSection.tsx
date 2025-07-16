@@ -11,46 +11,18 @@ const HeroSection = () => {
         <div className="absolute bottom-32 right-20 w-24 h-24 bg-golden/20 rounded-full blur-lg animate-float delay-1000"></div>
         <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-rose-gold/15 rounded-full blur-md animate-mystical-glow"></div>
         
-        {/* Floating Icons - Enhanced intense animation */}
-        <div className="absolute top-32 right-1/4 text-mystical-purple/30 animate-float-intense hover:animate-mystical-glow transition-all duration-500 hover:scale-150">
+        {/* Floating Icons */}
+        <div className="absolute top-32 right-1/4 text-mystical-purple/30 animate-float">
           <Star className="h-6 w-6" />
         </div>
-        <div className="absolute bottom-40 left-1/3 text-golden/40 animate-drift delay-500 hover:animate-mystical-glow transition-all duration-500 hover:scale-150">
+        <div className="absolute bottom-40 left-1/3 text-golden/40 animate-float delay-500">
           <Sparkles className="h-8 w-8" />
         </div>
-        <div className="absolute top-40 left-20 text-rose-gold/30 animate-float-intense delay-1500 hover:animate-mystical-glow transition-all duration-500 hover:scale-150">
+        <div className="absolute top-40 left-20 text-rose-gold/30 animate-float delay-1500">
           <Coffee className="h-5 w-5" />
         </div>
-        <div className="absolute bottom-60 right-32 text-mystical-purple/25 animate-drift delay-2000 hover:animate-mystical-glow transition-all duration-500 hover:scale-150">
+        <div className="absolute bottom-60 right-32 text-mystical-purple/25 animate-float delay-2000">
           <Eye className="h-7 w-7" />
-        </div>
-        
-        {/* Additional floating symbols for more intense movement */}
-        <div className="absolute top-1/4 right-10 text-mystical-purple/20 animate-float-intense delay-700 hover:animate-mystical-glow transition-all duration-500 hover:scale-150">
-          <Star className="h-4 w-4" />
-        </div>
-        <div className="absolute bottom-1/4 left-10 text-golden/30 animate-drift delay-1200 hover:animate-mystical-glow transition-all duration-500 hover:scale-150">
-          <Coffee className="h-6 w-6" />
-        </div>
-        <div className="absolute top-1/3 left-1/2 text-rose-gold/25 animate-float-intense delay-1800 hover:animate-mystical-glow transition-all duration-500 hover:scale-150">
-          <Sparkles className="h-5 w-5" />
-        </div>
-        <div className="absolute bottom-1/3 right-1/3 text-mystical-purple/30 animate-drift delay-2500 hover:animate-mystical-glow transition-all duration-500 hover:scale-150">
-          <Eye className="h-4 w-4" />
-        </div>
-        
-        {/* More symbols around the circle for enhanced visual effect */}
-        <div className="absolute top-1/5 left-1/4 text-mystical-purple/15 animate-float-intense delay-3000 hover:animate-mystical-glow transition-all duration-500 hover:scale-150">
-          <Sparkles className="h-3 w-3" />
-        </div>
-        <div className="absolute bottom-1/5 right-1/4 text-golden/25 animate-drift delay-3500 hover:animate-mystical-glow transition-all duration-500 hover:scale-150">
-          <Star className="h-5 w-5" />
-        </div>
-        <div className="absolute top-3/4 left-1/5 text-rose-gold/20 animate-float-intense delay-4000 hover:animate-mystical-glow transition-all duration-500 hover:scale-150">
-          <Eye className="h-4 w-4" />
-        </div>
-        <div className="absolute top-1/6 right-1/5 text-mystical-purple/25 animate-drift delay-4500 hover:animate-mystical-glow transition-all duration-500 hover:scale-150">
-          <Coffee className="h-6 w-6" />
         </div>
       </div>
 
