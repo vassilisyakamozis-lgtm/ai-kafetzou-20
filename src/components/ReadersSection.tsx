@@ -1,39 +1,45 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Crown, Heart, Sparkles } from "lucide-react";
+import renaImage from "@/assets/rena-modern.jpg";
+import katinaImage from "@/assets/katina-smyrnia.jpg";
+import isisdoraImage from "@/assets/isisdora-spiritual.jpg";
 
 const ReadersSection = () => {
   const readers = [
     {
       id: 1,
-      name: "Νεαρή Μάντισσα",
-      title: "Young Oracle",
+      name: "Ρένα η μοντέρνα",
+      title: "Modern Oracle",
       age: "25 years",
       specialty: "Αγάπη & Νέες Αρχές",
       description: "Φρέσκιες προβλέψεις με νεανική αισιοδοξία. Ιδανική για νέες σχέσεις, αλλαγές καριέρας και δημιουργικές προσπάθειες.",
       icon: Heart,
+      image: renaImage,
       gradient: "from-rose-gold to-soft-pink",
       shadow: "shadow-rose-gold-light"
     },
     {
       id: 2,
-      name: "Έμπειρη Καφετζού",
-      title: "Experienced Reader",
+      name: "Κατίνα η Σμυρνιά",
+      title: "Traditional Reader",
       age: "45 years", 
       specialty: "Ισορροπία Ζωής & Σοφία",
       description: "Ισορροπημένη οπτική με εμπειρία ζωής. Ιδανική για οικογενειακά θέματα, επαγγελματική καθοδήγηση και προσωπική ανάπτυξη.",
       icon: Crown,
+      image: katinaImage,
       gradient: "from-mystical-purple to-mystical-purple-light",
       shadow: "shadow-mystical"
     },
     {
       id: 3,
-      name: "Σοφή Γιαγιά",
-      title: "Wise Grandmother",
+      name: "Ισισδώρα η πνευματική",
+      title: "Spiritual Grandmother",
       age: "70 years",
       specialty: "Βαθιά Σοφία & Μοίρα",
       description: "Αρχαία σοφία και βαθιές προβλέψεις. Καλύτερη για σημαντικές αποφάσεις ζωής, πνευματική καθοδήγηση και κατανόηση του πεπρωμένου.",
       icon: Sparkles,
+      image: isisdoraImage,
       gradient: "from-golden to-golden-light",
       shadow: "shadow-golden"
     }
@@ -71,8 +77,16 @@ const ReadersSection = () => {
                 
                 <CardHeader className="text-center relative z-10">
                   <div className="mx-auto mb-4 relative">
-                    <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${reader.gradient} flex items-center justify-center animate-mystical-glow`}>
-                      <IconComponent className="h-10 w-10 text-white" />
+                    <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-mystical-purple/30 animate-mystical-glow">
+                      <img 
+                        src={reader.image} 
+                        alt={reader.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className={`absolute inset-0 bg-gradient-to-br ${reader.gradient} opacity-20`}></div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <IconComponent className="h-6 w-6 text-white drop-shadow-lg" />
+                      </div>
                     </div>
                     {/* Age Badge */}
                     <div className="absolute -bottom-2 -right-2 bg-background border-2 border-mystical-purple/30 rounded-full px-2 py-1 text-xs font-medium text-mystical-purple">
