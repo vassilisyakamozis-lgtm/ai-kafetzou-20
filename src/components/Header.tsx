@@ -1,104 +1,84 @@
-import { Button } from "@/components/ui/button";
-import { Crown, Sparkles, LogOut, User } from "lucide-react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import logoIcon from "@/assets/logo-icon.png";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { User, LogOut, Coffee } from "lucide-react";
 
 const Header = () => {
-  const { user, profile, signOut } = useAuth();
+  const { user, signOut, profile } = useAuth();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-mystical-purple/20">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-navy/95 backdrop-blur-sm border-b border-gray-custom-border/20">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3">
-            <div className="relative">
-              <img src="/lovable-uploads/bb07a43a-7bc4-4220-b603-524ea88d69e1.png" alt="Ai Kafetzou" className="h-8 w-8 animate-mystical-glow" />
+          <Link to="/" className="flex items-center space-x-2 group">
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Coffee className="h-5 w-5 text-navy" />
             </div>
-            <div>
-              <h1 className="text-xl font-mystical font-bold text-mystical-purple">
-                AI Kafetzou
-              </h1>
-              <p className="text-xs text-muted-foreground -mt-1">Mystical Oracle</p>
-            </div>
+            <span className="text-xl font-serif font-semibold text-white">
+              AI Kafetzou
+            </span>
           </Link>
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="#features" className="text-foreground hover:text-mystical-purple transition-colors">
+            <Link 
+              to="/#features" 
+              className="text-white/80 hover:text-white transition-colors text-sm font-medium"
+            >
               Χαρακτηριστικά
-            </a>
-            <a href="#readers" className="text-foreground hover:text-mystical-purple transition-colors">
-              Καφετζούδες
-            </a>
-            <Link to="/cup" className="text-foreground hover:text-mystical-purple transition-colors">
-              Φλιτζάνι
             </Link>
-            <a href="#pricing" className="text-foreground hover:text-mystical-purple transition-colors">
+            <Link 
+              to="/#readers" 
+              className="text-white/80 hover:text-white transition-colors text-sm font-medium"
+            >
+              Αναγνώστες
+            </Link>
+            <Link 
+              to="/#pricing" 
+              className="text-white/80 hover:text-white transition-colors text-sm font-medium"
+            >
               Τιμές
-            </a>
+            </Link>
           </nav>
 
-          {/* Auth Section */}
-          <div className="flex items-center space-x-3">
+          {/* Auth Actions */}
+          <div className="flex items-center space-x-4">
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={profile?.avatar_url || ''} alt={profile?.display_name || ''} />
-                      <AvatarFallback>
-                        {profile?.display_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
+                      <AvatarImage src={profile?.avatar_url} alt={profile?.display_name || "User"} />
+                      <AvatarFallback className="bg-white text-navy">
+                        <User className="h-4 w-4" />
                       </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {profile?.display_name || 'Χρήστης'}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user.email}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Προφίλ</span>
+                  <DropdownMenuItem className="flex-col items-start">
+                    <div className="text-sm font-medium">{profile?.display_name || "Χρήστης"}</div>
+                    <div className="text-xs text-muted-foreground">{user.email}</div>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => signOut()}>
+                  <DropdownMenuItem onClick={signOut} className="text-destructive">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Αποσύνδεση</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <>
-                <Link to="/auth">
-                  <Button variant="ghost" size="sm">
-                    Σύνδεση
-                  </Button>
-                </Link>
-                <Link to="/auth">
-                  <Button variant="mystical" size="sm">
-                    Εγγραφή
-                  </Button>
-                </Link>
-              </>
+              <div className="flex items-center space-x-2">
+                <Button variant="ghost" size="sm" asChild className="text-white hover:bg-white/10">
+                  <Link to="/auth">Σύνδεση</Link>
+                </Button>
+                <Button size="sm" asChild className="bg-white text-navy hover:bg-white/90">
+                  <Link to="/auth">Εγγραφή</Link>
+                </Button>
+              </div>
             )}
           </div>
         </div>
