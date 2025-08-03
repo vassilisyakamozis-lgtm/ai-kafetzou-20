@@ -52,18 +52,22 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
-				// Clean Professional Colors
-				'navy': {
-					DEFAULT: 'hsl(var(--navy-dark))',
-					light: 'hsl(var(--navy-light))'
+				// Mystical AI Kafetzou Colors
+				'mystical-purple': {
+					DEFAULT: 'hsl(var(--mystical-purple))',
+					light: 'hsl(var(--mystical-purple-light))',
+					dark: 'hsl(var(--mystical-purple-dark))'
 				},
-				'gray-custom': {
-					light: 'hsl(var(--gray-light))',
-					medium: 'hsl(var(--gray-medium))',
-					border: 'hsl(var(--gray-border))'
+				'rose-gold': {
+					DEFAULT: 'hsl(var(--rose-gold))',
+					light: 'hsl(var(--rose-gold-light))'
 				},
-				'accent-blue': 'hsl(var(--accent-blue))',
-				'accent-purple': 'hsl(var(--accent-purple))',
+				'golden': {
+					DEFAULT: 'hsl(var(--golden))',
+					light: 'hsl(var(--golden-light))'
+				},
+				'lavender': 'hsl(var(--lavender))',
+				'soft-pink': 'hsl(var(--soft-pink))',
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -81,18 +85,18 @@ export default {
 				sm: 'calc(var(--radius) - 4px)'
 			},
 			backgroundImage: {
-				'gradient-hero': 'var(--gradient-hero)',
-				'gradient-galaxy': 'var(--gradient-galaxy)',
-				'gradient-card': 'var(--gradient-card)'
+				'gradient-mystical': 'var(--gradient-mystical)',
+				'gradient-golden': 'var(--gradient-golden)',
+				'gradient-soft': 'var(--gradient-soft)'
 			},
 			boxShadow: {
-				'card': 'var(--shadow-card)',
-				'hero': 'var(--shadow-hero)',
-				'button': 'var(--shadow-button)'
+				'mystical': 'var(--shadow-mystical)',
+				'golden': 'var(--shadow-golden)',
+				'soft': 'var(--shadow-soft)'
 			},
 			fontFamily: {
-				'serif': ['Playfair Display', 'serif'],
-				'sans': ['Inter', 'sans-serif']
+				'mystical': ['Playfair Display', 'serif'],
+				'elegant': ['Inter', 'sans-serif']
 			},
 			keyframes: {
 				'accordion-down': {
