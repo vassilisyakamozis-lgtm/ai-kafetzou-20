@@ -5,66 +5,62 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        console.log('AuthCallback: Processing OAuth callback...');
-        console.log('Current URL:', window.location.href);
-        
-        // Listen for auth state changes first
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            console.log('AuthCallback: Auth state changed:', event, session);
-            
-            if (event === 'SIGNED_IN' && session) {
-              console.log('AuthCallback: User signed in successfully');
-              // Notify parent window of successful auth
-              if (window.opener) {
-                window.opener.postMessage({ 
-                  type: 'SUPABASE_AUTH_SUCCESS', 
-                  session: session 
-                }, window.location.origin);
-                window.close();
-              }
-            } else if (event === 'SIGNED_OUT') {
-              console.log('AuthCallback: User signed out');
+        console.log('AuthCallback: Exchanging code for session...', window.location.href);
+
+        // Recommended PKCE exchange for OAuth code
+        const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+
+        if (error) {
+          console.error('AuthCallback: exchangeCodeForSession error:', error);
+
+          // Fallback: check if session already exists
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session) {
+            if (window.opener) {
+              window.opener.postMessage({ type: 'SUPABASE_AUTH_SUCCESS', session: sessionData.session }, window.location.origin);
+              window.close();
+              return;
+            } else {
+              window.location.replace('/');
+              return;
             }
           }
-        );
 
-        // Check if there's already a session
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Auth callback error:', error);
           if (window.opener) {
-            window.opener.postMessage({ 
-              type: 'SUPABASE_AUTH_ERROR', 
-              error: error.message 
-            }, window.location.origin);
+            window.opener.postMessage({ type: 'SUPABASE_AUTH_ERROR', error: error.message }, window.location.origin);
             window.close();
-          }
-        } else if (session) {
-          console.log('AuthCallback: Existing session found:', session);
-          if (window.opener) {
-            window.opener.postMessage({ 
-              type: 'SUPABASE_AUTH_SUCCESS', 
-              session: session 
-            }, window.location.origin);
-            window.close();
+            return;
+          } else {
+            window.location.replace('/auth?error=oauth');
+            return;
           }
         }
 
-        // Cleanup subscription after a delay to allow auth processing
-        setTimeout(() => {
-          subscription?.unsubscribe();
-        }, 5000);
-        
-      } catch (err) {
-        console.error('Callback processing error:', err);
+        if (data?.session) {
+          console.log('AuthCallback: Session established');
+          if (window.opener) {
+            window.opener.postMessage({ type: 'SUPABASE_AUTH_SUCCESS', session: data.session }, window.location.origin);
+            window.close();
+          } else {
+            window.location.replace('/');
+          }
+          return;
+        }
+
+        console.warn('AuthCallback: No session returned after exchange');
         if (window.opener) {
-          window.opener.postMessage({ 
-            type: 'SUPABASE_AUTH_ERROR', 
-            error: 'Callback processing failed' 
-          }, window.location.origin);
+          window.opener.postMessage({ type: 'SUPABASE_AUTH_ERROR', error: 'No session returned' }, window.location.origin);
           window.close();
+        } else {
+          window.location.replace('/auth?error=no-session');
+        }
+      } catch (err: any) {
+        console.error('AuthCallback: Unexpected error:', err);
+        if (window.opener) {
+          window.opener.postMessage({ type: 'SUPABASE_AUTH_ERROR', error: err?.message || 'Callback processing failed' }, window.location.origin);
+          window.close();
+        } else {
+          window.location.replace('/auth?error=callback');
         }
       }
     };
