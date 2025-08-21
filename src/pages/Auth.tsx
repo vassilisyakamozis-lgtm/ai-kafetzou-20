@@ -113,14 +113,14 @@ export default function Auth() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: `${window.location.origin}/auth/callback`,
           skipBrowserRedirect: true,
         }
       });
 
       if (error) throw error;
 
-      // Open the provider URL in a popup (best for embedded iframes)
+      // Open the provider URL in a popup
       const popup = window.open(
         data?.url || '',
         'google-auth',
@@ -133,24 +133,39 @@ export default function Auth() {
           window.location.href = data.url;
           return;
         }
-        throw new Error('Αποτυχία ανοίγματος popup και δεν υπάρχει URL ανακατεύθυνσης.');
+        throw new Error('Αποτυχία ανοίγματος popup.');
       }
 
-      // Poll for session and close popup when done
-      const started = Date.now();
-      const poll = setInterval(async () => {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData.session) {
-          clearInterval(poll);
-          try { popup.close(); } catch {}
+      // Listen for messages from the callback page
+      const messageListener = (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return;
+        
+        if (event.data.type === 'SUPABASE_AUTH_SUCCESS') {
+          window.removeEventListener('message', messageListener);
           toast({ title: 'Επιτυχής σύνδεση!', description: 'Καλώς ήρθατε!' });
           navigate('/');
+        } else if (event.data.type === 'SUPABASE_AUTH_ERROR') {
+          window.removeEventListener('message', messageListener);
+          toast({
+            title: "Σφάλμα Google σύνδεσης",
+            description: event.data.error || "Παρουσιάστηκε σφάλμα κατά τη σύνδεση.",
+            variant: "destructive",
+          });
         }
-        // Timeout after 2 minutes
-        if (Date.now() - started > 120000 || popup.closed) {
-          clearInterval(poll);
+        setLoading(false);
+      };
+
+      window.addEventListener('message', messageListener);
+
+      // Cleanup if popup is closed manually
+      const pollClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(pollClosed);
+          window.removeEventListener('message', messageListener);
+          setLoading(false);
         }
       }, 1000);
+
     } catch (error: any) {
       toast({
         title: "Σφάλμα Google σύνδεσης",
