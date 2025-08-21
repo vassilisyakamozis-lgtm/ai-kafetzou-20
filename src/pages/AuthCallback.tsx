@@ -5,32 +5,58 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Get session from URL hash
-        const { data, error } = await supabase.auth.getSession();
+        console.log('AuthCallback: Processing OAuth callback...');
+        console.log('Current URL:', window.location.href);
+        
+        // Listen for auth state changes first
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('AuthCallback: Auth state changed:', event, session);
+            
+            if (event === 'SIGNED_IN' && session) {
+              console.log('AuthCallback: User signed in successfully');
+              // Notify parent window of successful auth
+              if (window.opener) {
+                window.opener.postMessage({ 
+                  type: 'SUPABASE_AUTH_SUCCESS', 
+                  session: session 
+                }, window.location.origin);
+                window.close();
+              }
+            } else if (event === 'SIGNED_OUT') {
+              console.log('AuthCallback: User signed out');
+            }
+          }
+        );
+
+        // Check if there's already a session
+        const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Auth callback error:', error);
-          // Notify parent window of error
           if (window.opener) {
             window.opener.postMessage({ 
               type: 'SUPABASE_AUTH_ERROR', 
               error: error.message 
             }, window.location.origin);
+            window.close();
           }
-        } else if (data.session) {
-          // Notify parent window of successful auth
+        } else if (session) {
+          console.log('AuthCallback: Existing session found:', session);
           if (window.opener) {
             window.opener.postMessage({ 
               type: 'SUPABASE_AUTH_SUCCESS', 
-              session: data.session 
+              session: session 
             }, window.location.origin);
+            window.close();
           }
         }
+
+        // Cleanup subscription after a delay to allow auth processing
+        setTimeout(() => {
+          subscription?.unsubscribe();
+        }, 5000);
         
-        // Close popup
-        if (window.opener) {
-          window.close();
-        }
       } catch (err) {
         console.error('Callback processing error:', err);
         if (window.opener) {
