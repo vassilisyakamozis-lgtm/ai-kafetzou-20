@@ -110,83 +110,22 @@ export default function Auth() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      console.log('Auth: Starting Google OAuth flow...');
+      console.log('Auth: Starting Google OAuth with direct redirect...');
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
-          skipBrowserRedirect: true,
         }
       });
 
       if (error) {
-        console.error('OAuth initiation error:', error);
+        console.error('OAuth error:', error);
         throw error;
       }
 
-      console.log('Auth: OAuth URL received:', data?.url);
-
-      // Open the provider URL in a popup
-      const popup = window.open(
-        data?.url || '',
-        'google-auth',
-        'width=500,height=650,scrollbars=yes,resizable=yes'
-      );
-
-      if (!popup || popup.closed) {
-        console.log('Auth: Popup blocked, falling back to redirect');
-        // Fallback: redirect current tab
-        if (data?.url) {
-          window.location.href = data.url;
-          return;
-        }
-        throw new Error('Αποτυχία ανοίγματος popup.');
-      }
-
-      console.log('Auth: Popup opened, listening for messages...');
-
-      // Listen for messages from the callback page
-      const messageListener = (event: MessageEvent) => {
-        console.log('Auth: Received message:', event.data);
-        
-        if (event.origin !== window.location.origin) {
-          console.log('Auth: Ignoring message from different origin:', event.origin);
-          return;
-        }
-        
-        if (event.data.type === 'SUPABASE_AUTH_SUCCESS') {
-          console.log('Auth: Authentication successful!');
-          window.removeEventListener('message', messageListener);
-          clearInterval(pollClosed);
-          setLoading(false);
-          toast({ title: 'Επιτυχής σύνδεση!', description: 'Καλώς ήρθατε!' });
-          navigate('/');
-        } else if (event.data.type === 'SUPABASE_AUTH_ERROR') {
-          console.log('Auth: Authentication error:', event.data.error);
-          window.removeEventListener('message', messageListener);
-          clearInterval(pollClosed);
-          setLoading(false);
-          toast({
-            title: "Σφάλμα Google σύνδεσης",
-            description: event.data.error || "Παρουσιάστηκε σφάλμα κατά τη σύνδεση.",
-            variant: "destructive",
-          });
-        }
-      };
-
-      window.addEventListener('message', messageListener);
-
-      // Cleanup if popup is closed manually
-      const pollClosed = setInterval(() => {
-        if (popup.closed) {
-          console.log('Auth: Popup was closed by user');
-          clearInterval(pollClosed);
-          window.removeEventListener('message', messageListener);
-          setLoading(false);
-        }
-      }, 1000);
-
+      // This will redirect the current page to Google
+      console.log('Auth: Redirecting to Google...');
     } catch (error: any) {
       console.error('Google sign-in error:', error);
       setLoading(false);

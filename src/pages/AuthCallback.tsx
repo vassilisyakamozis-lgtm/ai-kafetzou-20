@@ -5,63 +5,28 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        console.log('AuthCallback: Exchanging code for session...', window.location.href);
-
-        // Recommended PKCE exchange for OAuth code
+        console.log('AuthCallback: Processing callback...', window.location.href);
+        
         const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href);
-
+        
         if (error) {
-          console.error('AuthCallback: exchangeCodeForSession error:', error);
-
-          // Fallback: check if session already exists
-          const { data: sessionData } = await supabase.auth.getSession();
-          if (sessionData?.session) {
-            if (window.opener) {
-              window.opener.postMessage({ type: 'SUPABASE_AUTH_SUCCESS', session: sessionData.session }, window.location.origin);
-              window.close();
-              return;
-            } else {
-              window.location.replace('/');
-              return;
-            }
-          }
-
-          if (window.opener) {
-            window.opener.postMessage({ type: 'SUPABASE_AUTH_ERROR', error: error.message }, window.location.origin);
-            window.close();
-            return;
-          } else {
-            window.location.replace('/auth?error=oauth');
-            return;
-          }
-        }
-
-        if (data?.session) {
-          console.log('AuthCallback: Session established');
-          if (window.opener) {
-            window.opener.postMessage({ type: 'SUPABASE_AUTH_SUCCESS', session: data.session }, window.location.origin);
-            window.close();
-          } else {
-            window.location.replace('/');
-          }
+          console.error('AuthCallback error:', error);
+          // Redirect to auth with error
+          window.location.replace('/auth?error=' + encodeURIComponent(error.message));
           return;
         }
 
-        console.warn('AuthCallback: No session returned after exchange');
-        if (window.opener) {
-          window.opener.postMessage({ type: 'SUPABASE_AUTH_ERROR', error: 'No session returned' }, window.location.origin);
-          window.close();
+        if (data?.session) {
+          console.log('AuthCallback: Success, redirecting to home');
+          // Success - redirect to home
+          window.location.replace('/');
         } else {
+          console.log('AuthCallback: No session, redirecting to auth');
           window.location.replace('/auth?error=no-session');
         }
       } catch (err: any) {
-        console.error('AuthCallback: Unexpected error:', err);
-        if (window.opener) {
-          window.opener.postMessage({ type: 'SUPABASE_AUTH_ERROR', error: err?.message || 'Callback processing failed' }, window.location.origin);
-          window.close();
-        } else {
-          window.location.replace('/auth?error=callback');
-        }
+        console.error('AuthCallback unexpected error:', err);
+        window.location.replace('/auth?error=callback-failed');
       }
     };
 
@@ -72,7 +37,7 @@ const AuthCallback = () => {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-        <p className="text-muted-foreground">Completing authentication...</p>
+        <p className="text-muted-foreground">Ολοκλήρωση σύνδεσης...</p>
       </div>
     </div>
   );
