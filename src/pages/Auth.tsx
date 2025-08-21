@@ -110,17 +110,47 @@ export default function Auth() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`
+          redirectTo: `${window.location.origin}/`,
+          skipBrowserRedirect: true,
         }
       });
 
-      if (error) {
-        throw error;
+      if (error) throw error;
+
+      // Open the provider URL in a popup (best for embedded iframes)
+      const popup = window.open(
+        data?.url || '',
+        'google-auth',
+        'width=500,height=650,scrollbars=yes,resizable=yes'
+      );
+
+      if (!popup || popup.closed) {
+        // Fallback: redirect current tab
+        if (data?.url) {
+          window.location.href = data.url;
+          return;
+        }
+        throw new Error('Αποτυχία ανοίγματος popup και δεν υπάρχει URL ανακατεύθυνσης.');
       }
 
+      // Poll for session and close popup when done
+      const started = Date.now();
+      const poll = setInterval(async () => {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          clearInterval(poll);
+          try { popup.close(); } catch {}
+          toast({ title: 'Επιτυχής σύνδεση!', description: 'Καλώς ήρθατε!' });
+          navigate('/');
+        }
+        // Timeout after 2 minutes
+        if (Date.now() - started > 120000 || popup.closed) {
+          clearInterval(poll);
+        }
+      }, 1000);
     } catch (error: any) {
       toast({
         title: "Σφάλμα Google σύνδεσης",
