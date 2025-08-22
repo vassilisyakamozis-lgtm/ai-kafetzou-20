@@ -110,7 +110,7 @@ export default function Auth() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      console.log('Auth: Starting Google OAuth (skip redirect, top window)...');
+      console.log('Auth: Starting Google OAuth with popup...');
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -126,8 +126,53 @@ export default function Auth() {
       }
 
       if (data?.url) {
-        console.log('Auth: Opening Google in top window');
-        (window.top || window).location.href = data.url;
+        console.log('Auth: Opening Google in popup window');
+        const width = 500;
+        const height = 600;
+        const left = window.innerWidth / 2 - width / 2;
+        const top = window.innerHeight / 2 - height / 2;
+        
+        const popup = window.open(
+          data.url,
+          'google-signin',
+          `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+        );
+
+        // Listen for the popup to close or for messages
+        const checkClosed = setInterval(() => {
+          if (popup?.closed) {
+            clearInterval(checkClosed);
+            setLoading(false);
+            // Check if user was authenticated
+            supabase.auth.getSession().then(({ data: { session } }) => {
+              if (session) {
+                toast({
+                  title: "Επιτυχής σύνδεση!",
+                  description: "Καλώς ήρθατε!",
+                });
+                navigate('/');
+              }
+            });
+          }
+        }, 1000);
+
+        // Also listen for auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'SIGNED_IN' && session) {
+            clearInterval(checkClosed);
+            if (popup && !popup.closed) {
+              popup.close();
+            }
+            setLoading(false);
+            toast({
+              title: "Επιτυχής σύνδεση!",
+              description: "Καλώς ήρθατε!",
+            });
+            navigate('/');
+            subscription.unsubscribe();
+          }
+        });
+
       } else {
         throw new Error('Δεν ελήφθη URL ανακατεύθυνσης από το Supabase');
       }
