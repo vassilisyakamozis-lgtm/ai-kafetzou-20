@@ -110,13 +110,14 @@ export default function Auth() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      console.log('Auth: Starting Google OAuth with direct redirect...');
-      
+      console.log('Auth: Starting Google OAuth (skip redirect, top window)...');
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
-        }
+          skipBrowserRedirect: true,
+        },
       });
 
       if (error) {
@@ -124,15 +125,19 @@ export default function Auth() {
         throw error;
       }
 
-      // This will redirect the current page to Google
-      console.log('Auth: Redirecting to Google...');
+      if (data?.url) {
+        console.log('Auth: Opening Google in top window');
+        (window.top || window).location.href = data.url;
+      } else {
+        throw new Error('Δεν ελήφθη URL ανακατεύθυνσης από το Supabase');
+      }
     } catch (error: any) {
       console.error('Google sign-in error:', error);
       setLoading(false);
       toast({
-        title: "Σφάλμα Google σύνδεσης",
+        title: 'Σφάλμα Google σύνδεσης',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     }
   };

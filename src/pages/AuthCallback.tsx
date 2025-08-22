@@ -12,21 +12,21 @@ const AuthCallback = () => {
         if (error) {
           console.error('AuthCallback error:', error);
           // Redirect to auth with error
-          window.location.replace('/auth?error=' + encodeURIComponent(error.message));
+          (window.top || window).location.replace('/auth?error=' + encodeURIComponent(error.message));
           return;
         }
 
         if (data?.session) {
           console.log('AuthCallback: Success, redirecting to home');
           // Success - redirect to home
-          window.location.replace('/');
+          (window.top || window).location.replace('/');
         } else {
           console.log('AuthCallback: No session, redirecting to auth');
-          window.location.replace('/auth?error=no-session');
+          (window.top || window).location.replace('/auth?error=no-session');
         }
       } catch (err: any) {
         console.error('AuthCallback unexpected error:', err);
-        window.location.replace('/auth?error=callback-failed');
+        (window.top || window).location.replace('/auth?error=callback-failed');
       }
     };
 
