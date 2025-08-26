@@ -134,12 +134,11 @@ const Cup = () => {
   };
 
   const getCupReading = async (formData: CupReadingForm, imageFile: File): Promise<string | null> => {
-    // Convert image to base64
     const imageBase64 = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
-        const base64 = result.split(',')[1]; // Remove data:image/jpeg;base64, prefix
+        const base64 = result.split(',')[1];
         resolve(base64);
       };
       reader.readAsDataURL(imageFile);
@@ -158,24 +157,13 @@ const Cup = () => {
         }
       });
 
-      if (error) {
-        console.error('Error calling cup-reading function:', error);
-        throw new Error('Παρουσιάστηκε σφάλμα κατά την επικοινωνία με το σύστημα ανάγνωσης.');
-      }
-
-      if (data.error) {
-        console.error('Cup reading error:', data.error);
-        throw new Error(data.error);
-      }
+      if (error) throw new Error('Παρουσιάστηκε σφάλμα κατά την επικοινωνία με το σύστημα ανάγνωσης.');
+      if (data.error) throw new Error(data.error);
 
       if (data.reading) {
-        toast({
-          title: "Ο χρησμός σας είναι έτοιμος!",
-          description: "Δείτε την ανάγνωση του φλιτζανιού σας.",
-        });
+        toast({ title: "Ο χρησμός σας είναι έτοιμος!", description: "Δείτε την ανάγνωση του φλιτζανιού σας." });
         return data.reading;
       }
-
       return null;
     } catch (error) {
       console.error('Error getting cup reading:', error);
@@ -192,18 +180,14 @@ const Cup = () => {
   };
 
   const handleSaveReading = async (reading: string) => {
-    // TODO: Implement saving to user's dashboard when authentication is ready
-    // For now, just show a placeholder message
     console.log('Saving reading:', reading);
     throw new Error('Η αποθήκευση θα είναι διαθέσιμη μόλις δημιουργήσουμε το σύστημα χρηστών.');
   };
 
-  // Show loading screen
   if (isLoading && selectedReader) {
     return <CupReadingLoader readerName={selectedReader.name} />;
   }
 
-  // Show reading result
   if (readingResult && selectedReader) {
     return (
       <CupReadingResult
@@ -275,24 +259,28 @@ const Cup = () => {
                                     id={reader.id}
                                     className="peer sr-only"
                                   />
-                                   <Label
-                                     htmlFor={reader.id}
-                                     className="flex flex-col items-center p-4 border-2 border-mystical-purple/20 rounded-xl cursor-pointer hover:border-mystical-purple/40 peer-checked:border-mystical-purple peer-checked:bg-mystical-purple/5 transition-all"
-                                   >
-                                     <div className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-mystical-purple/30 mb-3 animate-mystical-glow">
-                                       <img 
-                                         src={reader.image} 
-                                         alt={reader.name}
-                                         className="w-full h-full object-cover"
-                                       />
-                                       <div className={`absolute inset-0 bg-gradient-to-br ${reader.gradient} opacity-20`}></div>
-                                       <div className="absolute inset-0 flex items-center justify-center">
-                                         <IconComponent className="h-6 w-6 text-white drop-shadow-lg" />
-                                       </div>
-                                     </div>
-                                     <h3 className="font-medium text-mystical-purple text-center">{reader.name}</h3>
-                                     <p className="text-sm text-muted-foreground text-center mt-1">{reader.description}</p>
-                                   </Label>
+                                  <Label
+                                    htmlFor={reader.id}
+                                    className="flex flex-col items-center p-4 border-2 border-mystical-purple/20 rounded-xl cursor-pointer hover:border-mystical-purple/40 peer-checked:border-mystical-purple peer-checked:bg-mystical-purple/5 transition-all"
+                                  >
+                                    {/* ΤΕΤΡΑΓΩΝΟ PLACEHOLDER / ΕΙΚΟΝΑ */}
+                                    <div className="relative w-28 aspect-square overflow-hidden rounded-2xl border-2 border-mystical-purple/25 mb-3 shadow-sm">
+                                      <img
+                                        src={reader.image}
+                                        alt={reader.name}
+                                        className="absolute inset-0 h-full w-full object-cover"
+                                        loading="lazy"
+                                      />
+                                      <div className={`absolute inset-0 bg-gradient-to-br ${reader.gradient} opacity-10 pointer-events-none`} />
+                                      <div className="absolute right-2 top-2">
+                                        <IconComponent className="h-5 w-5 text-white drop-shadow" />
+                                      </div>
+                                    </div>
+
+                                    {/* ΚΕΙΜΕΝΟ ΚΑΤΩ ΑΠΟ ΤΗ ΦΩΤΟ */}
+                                    <h3 className="font-medium text-mystical-purple text-center">{reader.name}</h3>
+                                    <p className="text-sm text-muted-foreground text-center mt-1">{reader.description}</p>
+                                  </Label>
                                 </div>
                               );
                             })}
@@ -407,7 +395,6 @@ const Cup = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col items-center space-y-6">
-                    {/* Title and Subtitle */}
                     <div className="text-center space-y-2">
                       <h3 className="font-mystical text-[24px] font-semibold text-[#3B1F4A]">
                         Ανέβασε το Φλιτζάνι σου ☕
@@ -417,14 +404,12 @@ const Cup = () => {
                       </p>
                     </div>
 
-                    {/* Upload Card */}
                     <div className="w-full max-w-md">
                       <Label
                         htmlFor="image-upload"
                         className="flex flex-col items-center justify-center w-full h-80 border-2 border-dashed border-[#8B5CF6] bg-[#FBF7FF] rounded-2xl cursor-pointer hover:border-[#F472B6] hover:bg-[#FDF4FF] transition-all duration-300 shadow-[0_8px_32px_rgba(139,92,246,0.08)] p-8"
                       >
                         {isLoading ? (
-                          /* Uploading State */
                           <div className="flex flex-col items-center space-y-4 w-full">
                             <div className="w-full max-w-xs bg-[#E9D5FF] rounded-full h-2">
                               <div className="bg-[#8B5CF6] h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
@@ -432,7 +417,6 @@ const Cup = () => {
                             <p className="text-[#3B1F4A] font-medium">Γίνεται μεταφόρτωση…</p>
                           </div>
                         ) : imagePreview ? (
-                          /* Success State */
                           <div className="flex flex-col items-center space-y-4">
                             <img
                               src={imagePreview}
@@ -447,7 +431,6 @@ const Cup = () => {
                             </Button>
                           </div>
                         ) : (
-                          /* Idle State */
                           <div className="flex flex-col items-center justify-center space-y-4">
                             <Upload className="w-12 h-12 text-[#8B5CF6]" />
                             <p className="text-[#3B1F4A] font-medium text-center">
@@ -465,26 +448,10 @@ const Cup = () => {
                         className="sr-only"
                       />
                     </div>
-
-                    {/* Error State - shown when there's an error */}
-                    {/* This would be controlled by an error state if needed */}
-                    {/* <div className="text-center space-y-3">
-                      <p className="text-red-600 text-sm">
-                        Κάτι πήγε στραβά. Δέχομαι JPG/PNG έως 8MB.
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {setSelectedImage(null); setImagePreview(null);}}
-                        className="text-[#8B5CF6] border-[#8B5CF6] hover:bg-[#F3E8FF]"
-                      >
-                        Δοκίμασε ξανά
-                      </Button>
-                    </div> */}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Submit Button - Only shown if no image is uploaded, otherwise button is in the upload card */}
               {!imagePreview && (
                 <div className="text-center">
                   <Button
