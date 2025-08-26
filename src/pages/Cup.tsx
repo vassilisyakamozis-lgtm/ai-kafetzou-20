@@ -406,66 +406,107 @@ const Cup = () => {
                   <CardDescription>Ανεβάστε μια καθαρή φωτογραφία του φλιτζανιού σας μετά τον καφέ</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-center w-full">
+                  <div className="flex flex-col items-center space-y-6">
+                    {/* Title and Subtitle */}
+                    <div className="text-center space-y-2">
+                      <h3 className="font-mystical text-[24px] font-semibold text-[#3B1F4A]">
+                        Ανέβασε το Φλιτζάνι σου ☕
+                      </h3>
+                      <p className="font-elegant text-sm text-[#7E6A8A] max-w-[400px] mx-auto">
+                        Σύρε & άφησε την εικόνα ή κάνε κλικ για επιλογή. Δεκτά αρχεία: JPG/PNG έως 8MB.
+                      </p>
+                    </div>
+
+                    {/* Upload Card */}
+                    <div className="w-full max-w-md">
                       <Label
                         htmlFor="image-upload"
-                        className="flex flex-col items-center justify-center w-full h-64 border-2 border-mystical-purple/30 border-dashed rounded-xl cursor-pointer bg-mystical-purple/5 hover:bg-mystical-purple/10 transition-colors"
+                        className="flex flex-col items-center justify-center w-full h-80 border-2 border-dashed border-[#8B5CF6] bg-[#FBF7FF] rounded-2xl cursor-pointer hover:border-[#F472B6] hover:bg-[#FDF4FF] transition-all duration-300 shadow-[0_8px_32px_rgba(139,92,246,0.08)] p-8"
                       >
-                        {imagePreview ? (
-                          <img
-                            src={imagePreview}
-                            alt="Φλιτζάνι προεπισκόπηση"
-                            className="w-full h-full object-cover rounded-xl"
-                          />
+                        {isLoading ? (
+                          /* Uploading State */
+                          <div className="flex flex-col items-center space-y-4 w-full">
+                            <div className="w-full max-w-xs bg-[#E9D5FF] rounded-full h-2">
+                              <div className="bg-[#8B5CF6] h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                            </div>
+                            <p className="text-[#3B1F4A] font-medium">Γίνεται μεταφόρτωση…</p>
+                          </div>
+                        ) : imagePreview ? (
+                          /* Success State */
+                          <div className="flex flex-col items-center space-y-4">
+                            <img
+                              src={imagePreview}
+                              alt="Φλιτζάνι προεπισκόπηση"
+                              className="w-32 h-32 object-cover rounded-xl border-2 border-[#8B5CF6]/20"
+                            />
+                            <Button 
+                              type="submit"
+                              className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-6 py-3 shadow-[0_4px_16px_rgba(139,92,246,0.18)] transition"
+                            >
+                              Προχώρα στην Ανάλυση
+                            </Button>
+                          </div>
                         ) : (
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <Upload className="w-10 h-10 mb-3 text-mystical-purple" />
-                            <p className="mb-2 text-mystical-purple">
-                              <span className="font-semibold">Κάντε κλικ για ανέβασμα</span>
+                          /* Idle State */
+                          <div className="flex flex-col items-center justify-center space-y-4">
+                            <Upload className="w-12 h-12 text-[#8B5CF6]" />
+                            <p className="text-[#3B1F4A] font-medium text-center">
+                              Κάνε κλικ ή σύρε την εικόνα εδώ
                             </p>
-                            <p className="text-xs text-muted-foreground">PNG, JPG ή JPEG (MAX. 10MB)</p>
                           </div>
                         )}
-                        <Input
-                          id="image-upload"
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                        />
                       </Label>
+                      
+                      <Input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="sr-only"
+                      />
                     </div>
-                    {selectedImage && (
-                      <div className="text-sm text-muted-foreground">
-                        Επιλεγμένο αρχείο: {selectedImage.name}
-                      </div>
-                    )}
+
+                    {/* Error State - shown when there's an error */}
+                    {/* This would be controlled by an error state if needed */}
+                    {/* <div className="text-center space-y-3">
+                      <p className="text-red-600 text-sm">
+                        Κάτι πήγε στραβά. Δέχομαι JPG/PNG έως 8MB.
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {setSelectedImage(null); setImagePreview(null);}}
+                        className="text-[#8B5CF6] border-[#8B5CF6] hover:bg-[#F3E8FF]"
+                      >
+                        Δοκίμασε ξανά
+                      </Button>
+                    </div> */}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Submit Button */}
-              <div className="text-center">
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="bg-gradient-to-r from-mystical-purple to-mystical-purple-light text-white px-8 py-3 text-lg"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Προετοιμάζεται ο χρησμός...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-5 w-5" />
-                      Ξεκινήστε την Ανάγνωση
-                    </>
-                  )}
-                </Button>
-              </div>
+              {/* Submit Button - Only shown if no image is uploaded, otherwise button is in the upload card */}
+              {!imagePreview && (
+                <div className="text-center">
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="bg-gradient-to-r from-mystical-purple to-mystical-purple-light text-white px-8 py-3 text-lg"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Προετοιμάζεται ο χρησμός...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-5 w-5" />
+                        Ξεκινήστε την Ανάγνωση
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </form>
           </Form>
         </div>
