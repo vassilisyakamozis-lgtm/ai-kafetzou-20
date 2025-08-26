@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Volume2, VolumeX, Save, ArrowLeft } from "lucide-react";
+import { Volume2, VolumeX, Save, ArrowLeft, Download, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -12,6 +12,8 @@ interface CupReadingResultProps {
     name: string;
     description: string;
   };
+  uploadedImage?: string;
+  detectedSymbols?: string[];
   onBack: () => void;
   onSave?: (reading: string) => Promise<void>;
 }
@@ -23,7 +25,7 @@ const VOICE_MAPPING = {
   wise: { voice: 'alloy', name: 'Σοφή Γιαγιά', age: 'σοφή' }
 };
 
-const CupReadingResult = ({ reading, readerInfo, onBack, onSave }: CupReadingResultProps) => {
+const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols = [], onBack, onSave }: CupReadingResultProps) => {
   const { toast } = useToast();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -111,6 +113,40 @@ const CupReadingResult = ({ reading, readerInfo, onBack, onSave }: CupReadingRes
     }
   };
 
+  // Helper function to format reading content with proper structure
+  const formatReading = (text: string) => {
+    return text.split('\n').map((line, index) => {
+      // Section headings (###)
+      if (line.match(/^### \d+\./)) {
+        return (
+          <h3 key={index} className="font-mystical font-semibold text-[#3B1F4A] text-xl mb-3 mt-6 first:mt-0 pb-2 border-b-2 border-[#F3E8FF] w-fit">
+            {line.replace(/^### /, '')}
+          </h3>
+        );
+      }
+      // Advice list items
+      if (line.match(/^- /)) {
+        return (
+          <div key={index} className="bg-[#F9F5FF] rounded-lg p-4 mt-4 mb-4">
+            <div className="flex items-start gap-2">
+              <span className="text-green-600">✔️</span>
+              <span className="font-elegant text-[#3B1F4A] leading-relaxed">{line.replace(/^- /, '')}</span>
+            </div>
+          </div>
+        );
+      }
+      // Regular paragraphs
+      if (line.trim()) {
+        return (
+          <p key={index} className="font-elegant text-base text-[#3B1F4A] leading-relaxed max-w-[620px] mb-4">
+            {line}
+          </p>
+        );
+      }
+      return null;
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-mystical-purple/10 via-background to-rose-gold/10">
       {/* Header */}
@@ -126,7 +162,7 @@ const CupReadingResult = ({ reading, readerInfo, onBack, onSave }: CupReadingRes
           </Button>
           
           <h1 className="text-2xl font-mystical font-bold text-mystical-purple text-center">
-            Ο Χρησμός σας από την {voiceConfig.name}
+            Ο Χρησμός σας
           </h1>
           
           <div className="flex gap-2">
@@ -143,154 +179,143 @@ const CupReadingResult = ({ reading, readerInfo, onBack, onSave }: CupReadingRes
                 <Volume2 className="h-4 w-4" />
               )}
             </Button>
-            
-            {onSave && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSave}
-                disabled={isSaving}
-                className="border-golden text-golden hover:bg-golden hover:text-white"
-              >
-                {isSaving ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-              </Button>
-            )}
           </div>
         </div>
 
-        {/* Papyrus Card */}
-        <div className="max-w-4xl mx-auto">
-          <Card className="relative overflow-hidden border-none shadow-2xl">
-            {/* Papyrus background with CSS */}
-            <div 
-              className="absolute inset-0 opacity-90"
-              style={{
-                backgroundImage: `
-                  radial-gradient(circle at 20% 20%, rgba(139, 121, 94, 0.1) 0%, transparent 50%),
-                  radial-gradient(circle at 80% 80%, rgba(160, 140, 115, 0.1) 0%, transparent 50%),
-                  radial-gradient(circle at 40% 60%, rgba(180, 165, 140, 0.1) 0%, transparent 50%),
-                  linear-gradient(45deg, rgba(139, 121, 94, 0.05) 0%, rgba(160, 140, 115, 0.05) 25%, rgba(180, 165, 140, 0.05) 50%, rgba(139, 121, 94, 0.05) 75%, rgba(160, 140, 115, 0.05) 100%)
-                `,
-                backgroundColor: '#f7f3e9',
-                backgroundSize: '200px 200px, 150px 150px, 250px 250px, 50px 50px'
-              }}
-            />
+        {/* 2-Column Layout */}
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
-            {/* Aged paper texture */}
-            <div 
-              className="absolute inset-0 opacity-20"
-              style={{
-                backgroundImage: `
-                  repeating-linear-gradient(
-                    0deg,
-                    transparent,
-                    transparent 2px,
-                    rgba(139, 121, 94, 0.1) 2px,
-                    rgba(139, 121, 94, 0.1) 4px
-                  ),
-                  repeating-linear-gradient(
-                    90deg,
-                    transparent,
-                    transparent 2px,
-                    rgba(139, 121, 94, 0.1) 2px,
-                    rgba(139, 121, 94, 0.1) 4px
-                  )
-                `
-              }}
-            />
-            
-            <CardContent className="relative z-10 p-8 md:p-12">
-              {/* Decorative border */}
-              <div className="border-2 border-golden/30 rounded-lg p-6 md:p-8 relative">
-                {/* Corner decorations */}
-                <div className="absolute top-2 left-2 w-6 h-6 border-l-2 border-t-2 border-golden/50"></div>
-                <div className="absolute top-2 right-2 w-6 h-6 border-r-2 border-t-2 border-golden/50"></div>
-                <div className="absolute bottom-2 left-2 w-6 h-6 border-l-2 border-b-2 border-golden/50"></div>
-                <div className="absolute bottom-2 right-2 w-6 h-6 border-r-2 border-b-2 border-golden/50"></div>
-                
-                {/* Reading content */}
-                <div className="text-center mb-6">
-                  <h2 className="text-xl font-mystical text-mystical-purple-dark mb-2">
-                    Χρησμός από την {voiceConfig.name}
-                  </h2>
-                  <p className="text-sm text-muted-foreground italic">
-                    με {voiceConfig.age} φωνή και χρόνια εμπειρίας
-                  </p>
-                </div>
-                
-                <div className="prose max-w-none">
-                  <div 
-                    className="text-lg leading-relaxed text-mystical-purple-dark font-serif whitespace-pre-wrap text-justify"
-                    style={{ 
-                      fontFamily: '"Times New Roman", serif',
-                      textShadow: '0 1px 2px rgba(139, 121, 94, 0.1)'
-                    }}
-                  >
-                    {reading}
-                  </div>
-                </div>
-                
-                {/* Signature */}
-                <div className="mt-8 text-right">
-                  <p className="text-sm italic text-muted-foreground">
-                    ~ {voiceConfig.name} ~
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {new Date().toLocaleDateString('el-GR', { 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Action buttons */}
-          <div className="flex justify-center gap-4 mt-8">
-            <Button
-              onClick={handlePlayAudio}
-              disabled={isPlaying}
-              className="bg-gradient-to-r from-mystical-purple to-mystical-purple-light text-white px-6"
-            >
-              {isPlaying ? (
-                <>
-                  <VolumeX className="h-4 w-4 mr-2" />
-                  Σταμάτημα
-                </>
-              ) : (
-                <>
-                  <Volume2 className="h-4 w-4 mr-2" />
-                  Άκου με τη φωνή της {voiceConfig.name}
-                </>
+            {/* Left Column - Image & Symbols */}
+            <div className="space-y-6">
+              {/* Uploaded Cup Image */}
+              {uploadedImage && (
+                <Card className="rounded-2xl shadow-[0_8px_32px_rgba(139,92,246,0.08)]">
+                  <CardContent className="p-6">
+                    <h3 className="font-mystical font-semibold text-[#3B1F4A] text-lg mb-4">
+                      Το Φλιτζάνι σας
+                    </h3>
+                    <div className="aspect-square overflow-hidden rounded-xl">
+                      <img 
+                        src={uploadedImage} 
+                        alt="Uploaded cup" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
               )}
-            </Button>
-            
-            {onSave && (
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                variant="outline"
-                className="border-golden text-golden hover:bg-golden hover:text-white px-6"
-              >
-                {isSaving ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
-                    Αποθήκευση...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Αποθήκευση στον Λογαριασμό
-                  </>
+
+              {/* Detected Symbols */}
+              {detectedSymbols.length > 0 && (
+                <Card className="rounded-2xl shadow-[0_8px_32px_rgba(139,92,246,0.08)]">
+                  <CardContent className="p-6">
+                    <h3 className="font-mystical font-semibold text-[#3B1F4A] text-lg mb-4">
+                      Σύμβολα που Εντόπισα
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {detectedSymbols.map((symbol, index) => (
+                        <span 
+                          key={index}
+                          className="bg-[#F3E8FF] text-[#3B1F4A] text-sm px-3 py-1 rounded-full"
+                        >
+                          {symbol}
+                        </span>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Right Column - Reading Card */}
+            <div>
+              <Card className="rounded-2xl shadow-[0_8px_32px_rgba(139,92,246,0.08)] border border-[#E9D5FF] overflow-hidden">
+                <div 
+                  className="relative"
+                  style={{ backgroundColor: '#FAF3E0' }}
+                >
+                  {/* Subtle inner glow */}
+                  <div className="absolute inset-0 rounded-2xl shadow-inner" style={{
+                    boxShadow: 'inset 0 0 20px rgba(139, 92, 246, 0.05)'
+                  }} />
+                  
+                  <CardContent className="relative p-8">
+                    {/* Reading Header */}
+                    <div className="text-center mb-8">
+                      <h2 className="font-mystical text-[26px] font-bold bg-gradient-to-r from-[#8B5CF6] to-[#F472B6] bg-clip-text text-transparent mb-2">
+                        Χρησμός από τη Νεαρή Μάντισσα
+                      </h2>
+                      <p className="font-elegant italic text-[#7E6A8A]">
+                        με νεανική φωνή και χρόνια εμπειρίας
+                      </p>
+                    </div>
+                    
+                    {/* Reading Content */}
+                    <div className="space-y-4">
+                      {formatReading(reading)}
+                    </div>
+                  </CardContent>
+                </div>
+              </Card>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap justify-center gap-4 mt-6">
+                <Button
+                  onClick={handlePlayAudio}
+                  disabled={isPlaying}
+                  className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-6 py-3 shadow-[0_4px_16px_rgba(139,92,246,0.18)] transition"
+                >
+                  {isPlaying ? (
+                    <>
+                      <VolumeX className="h-4 w-4 mr-2" />
+                      Σταμάτημα
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="h-4 w-4 mr-2" />
+                      Άκου
+                    </>
+                  )}
+                </Button>
+                
+                {onSave && (
+                  <Button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-6 py-3 shadow-[0_4px_16px_rgba(139,92,246,0.18)] transition"
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
+                        Αποθήκευση...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Αποθήκευσε τον Χρησμό
+                      </>
+                    )}
+                  </Button>
                 )}
-              </Button>
-            )}
+                
+                <Button
+                  variant="outline"
+                  className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-6 py-3 shadow-[0_4px_16px_rgba(139,92,246,0.18)] transition border-0"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Λήψη PDF
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-6 py-3 shadow-[0_4px_16px_rgba(139,92,246,0.18)] transition border-0"
+                >
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Κοινοποίησε
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
