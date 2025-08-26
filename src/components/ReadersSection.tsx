@@ -1,9 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Crown, Heart, Sparkles } from "lucide-react";
-import renaImage from "@/assets/rena-modern.jpg";
-import katinaImage from "@/assets/katina-smyrnia.jpg";
-import isisdoraImage from "@/assets/isisdora-spiritual.jpg";
 
 const ReadersSection = () => {
   const readers = [
@@ -15,7 +12,7 @@ const ReadersSection = () => {
       specialty: "Αγάπη & Νέες Αρχές",
       description: "Φρέσκιες προβλέψεις με νεανική αισιοδοξία. Ιδανική για νέες σχέσεις, αλλαγές καριέρας και δημιουργικές προσπάθειες.",
       icon: Heart,
-      image: renaImage,
+      image: "/images/tellers/modern-woman.png",
       gradient: "from-rose-gold to-soft-pink",
       shadow: "shadow-rose-gold-light"
     },
@@ -27,7 +24,7 @@ const ReadersSection = () => {
       specialty: "Ισορροπία Ζωής & Σοφία",
       description: "Ισορροπημένη οπτική με εμπειρία ζωής. Ιδανική για οικογενειακά θέματα, επαγγελματική καθοδήγηση και προσωπική ανάπτυξη.",
       icon: Crown,
-      image: katinaImage,
+      image: "/images/tellers/katina-klassiki.png",
       gradient: "from-mystical-purple to-mystical-purple-light",
       shadow: "shadow-mystical"
     },
@@ -39,7 +36,7 @@ const ReadersSection = () => {
       specialty: "Βαθιά Σοφία & Μοίρα",
       description: "Αρχαία σοφία και βαθιές προβλέψεις. Καλύτερη για σημαντικές αποφάσεις ζωής, πνευματική καθοδήγηση και κατανόηση του πεπρωμένου.",
       icon: Sparkles,
-      image: isisdoraImage,
+      image: "/images/tellers/mystic-woman.png",
       gradient: "from-golden to-golden-light",
       shadow: "shadow-golden"
     }
