@@ -52,6 +52,12 @@ const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols 
     try {
       setIsPlaying(true);
       
+      // Show toast when audio starts
+      toast({
+        title: "🔊 Ο Χρησμός σου παίζει…",
+        description: "Άκου προσεκτικά τις προβλέψεις σου",
+      });
+      
       // Call Supabase edge function for text-to-speech
       const { data, error } = await supabase.functions.invoke('text-to-speech', {
         body: { text: reading, voice: voiceConfig.voice }
@@ -119,7 +125,7 @@ const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols 
       // Section headings (###)
       if (line.match(/^### \d+\./)) {
         return (
-          <h3 key={index} className="font-mystical font-semibold text-[#3B1F4A] text-xl mb-3 mt-6 first:mt-0 pb-2 border-b-2 border-[#F3E8FF] w-fit">
+          <h3 key={index} className="font-mystical font-semibold text-[#3B1F4A] text-xl mb-2 mt-6 first:mt-0 border-b-2 border-[#F3E8FF] w-fit pb-1">
             {line.replace(/^### /, '')}
           </h3>
         );
@@ -184,7 +190,7 @@ const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols 
 
         {/* 2-Column Layout */}
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
             {/* Left Column - Image & Symbols */}
             <div className="space-y-6">
@@ -230,7 +236,7 @@ const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols 
 
             {/* Right Column - Reading Card */}
             <div>
-              <Card className="rounded-2xl shadow-[0_8px_32px_rgba(139,92,246,0.08)] border border-[#E9D5FF] overflow-hidden">
+              <Card className="rounded-2xl shadow-[0_8px_32px_rgba(139,92,246,0.08)] border border-[#E9D5FF] overflow-hidden max-w-[620px]">
                 <div 
                   className="relative"
                   style={{ backgroundColor: '#FAF3E0' }}
@@ -244,15 +250,15 @@ const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols 
                     {/* Reading Header */}
                     <div className="text-center mb-8">
                       <h2 className="font-mystical text-[26px] font-bold bg-gradient-to-r from-[#8B5CF6] to-[#F472B6] bg-clip-text text-transparent mb-2">
-                        Χρησμός από τη Νεαρή Μάντισσα
+                        Χρησμός από τη {voiceConfig.name}
                       </h2>
                       <p className="font-elegant italic text-[#7E6A8A]">
-                        με νεανική φωνή και χρόνια εμπειρίας
+                        με {voiceConfig.age} φωνή και χρόνια εμπειρίας
                       </p>
                     </div>
                     
                     {/* Reading Content */}
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-w-[620px]">
                       {formatReading(reading)}
                     </div>
                   </CardContent>
@@ -264,16 +270,16 @@ const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols 
                 <Button
                   onClick={handlePlayAudio}
                   disabled={isPlaying}
-                  className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-6 py-3 shadow-[0_4px_16px_rgba(139,92,246,0.18)] transition"
+                  className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-5 py-3 flex items-center gap-2"
                 >
                   {isPlaying ? (
                     <>
-                      <VolumeX className="h-4 w-4 mr-2" />
+                      <VolumeX className="h-4 w-4" />
                       Σταμάτημα
                     </>
                   ) : (
                     <>
-                      <Volume2 className="h-4 w-4 mr-2" />
+                      <Volume2 className="h-4 w-4" />
                       Άκου
                     </>
                   )}
@@ -283,16 +289,17 @@ const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols 
                   <Button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-6 py-3 shadow-[0_4px_16px_rgba(139,92,246,0.18)] transition"
+                    variant="outline"
+                    className="bg-white border border-[#8B5CF6]/30 hover:bg-[#F3E8FF] rounded-xl px-5 py-3 flex items-center gap-2"
                   >
                     {isSaving ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
                         Αποθήκευση...
                       </>
                     ) : (
                       <>
-                        <Save className="h-4 w-4 mr-2" />
+                        <Save className="h-4 w-4" />
                         Αποθήκευσε τον Χρησμό
                       </>
                     )}
@@ -301,17 +308,17 @@ const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols 
                 
                 <Button
                   variant="outline"
-                  className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-6 py-3 shadow-[0_4px_16px_rgba(139,92,246,0.18)] transition border-0"
+                  className="bg-white border border-[#8B5CF6]/30 hover:bg-[#F3E8FF] rounded-xl px-5 py-3 flex items-center gap-2"
                 >
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="h-4 w-4" />
                   Λήψη PDF
                 </Button>
                 
                 <Button
-                  variant="outline"
-                  className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-6 py-3 shadow-[0_4px_16px_rgba(139,92,246,0.18)] transition border-0"
+                  variant="ghost"
+                  className="text-[#3B1F4A] hover:text-[#8B5CF6] flex items-center gap-2"
                 >
-                  <Share2 className="h-4 w-4 mr-2" />
+                  <Share2 className="h-4 w-4" />
                   Κοινοποίησε
                 </Button>
               </div>
