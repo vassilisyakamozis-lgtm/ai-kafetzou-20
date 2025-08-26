@@ -3,7 +3,14 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Volume2, VolumeX, Save, ArrowLeft, Download, Share2 } from "lucide-react";
+import {
+  Volume2,
+  VolumeX,
+  Save,
+  ArrowLeft,
+  Download,
+  Share2,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -30,7 +37,8 @@ const VOICE_MAPPING = {
 const b64ToBlobUrl = (b64: string, mime = "audio/mpeg") => {
   const byteChars = atob(b64);
   const byteNumbers = new Array(byteChars.length);
-  for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+  for (let i = 0; i < byteChars.length; i++)
+    byteNumbers[i] = byteChars.charCodeAt(i);
   const byteArray = new Uint8Array(byteNumbers);
   const blob = new Blob([byteArray], { type: mime });
   return URL.createObjectURL(blob);
@@ -47,7 +55,9 @@ const CupReadingResult = ({
   const { toast } = useToast();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
+  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(
+    null
+  );
 
   const voiceConfig =
     VOICE_MAPPING[(readerInfo?.id as keyof typeof VOICE_MAPPING) || "experienced"] ??
@@ -67,7 +77,6 @@ const CupReadingResult = ({
 
   const handlePlayAudio = async () => {
     try {
-      // toggle off
       if (isPlaying && currentAudio) {
         currentAudio.pause();
         currentAudio.currentTime = 0;
@@ -75,7 +84,6 @@ const CupReadingResult = ({
         return;
       }
 
-      // stop previous if exists
       if (currentAudio) {
         currentAudio.pause();
         currentAudio.currentTime = 0;
@@ -88,9 +96,12 @@ const CupReadingResult = ({
         description: "Άκου προσεκτικά τις προβλέψεις σου",
       });
 
-      const { data, error } = await supabase.functions.invoke("text-to-speech", {
-        body: { text: reading, voice: voiceConfig.voice },
-      });
+      const { data, error } = await supabase.functions.invoke(
+        "text-to-speech",
+        {
+          body: { text: reading, voice: voiceConfig.voice },
+        }
+      );
       if (error || !data?.audioContent) throw new Error("TTS failed");
 
       const url = b64ToBlobUrl(data.audioContent);
@@ -143,8 +154,10 @@ const CupReadingResult = ({
   };
 
   const handleDownloadPdf = async () => {
-    // Placeholder – πρόσθεσε υλοποίηση (html2canvas + jsPDF ή server function)
-    toast({ title: "Σύντομα διαθέσιμο", description: "Η λήψη PDF θα προστεθεί άμεσα." });
+    toast({
+      title: "Σύντομα διαθέσιμο",
+      description: "Η λήψη PDF θα προστεθεί άμεσα.",
+    });
   };
 
   const handleShare = async () => {
@@ -153,18 +166,23 @@ const CupReadingResult = ({
         await navigator.share({
           title: "Ο Χρησμός μου",
           text: reading,
-          url: typeof window !== "undefined" ? window.location.href : undefined,
+          url:
+            typeof window !== "undefined" ? window.location.href : undefined,
         });
       } else {
         await navigator.clipboard.writeText(
-          `${reading}\n\n${typeof window !== "undefined" ? window.location.href : ""}`
+          `${reading}\n\n${
+            typeof window !== "undefined" ? window.location.href : ""
+          }`
         );
-        toast({ title: "Αντιγράφηκε", description: "Ο σύνδεσμος αντιγράφηκε στο πρόχειρο." });
+        toast({
+          title: "Αντιγράφηκε",
+          description: "Ο σύνδεσμος αντιγράφηκε στο πρόχειρο.",
+        });
       }
     } catch {}
   };
 
-  // Format reading text with headings and paragraphs
   const formatReading = (text: string) =>
     text.split("\n").map((line, i) => {
       if (/^### \d+\./.test(line)) {
@@ -179,14 +197,20 @@ const CupReadingResult = ({
       }
       if (/^- /.test(line)) {
         return (
-          <p key={`li-${i}`} className="font-['Inter'] text-base text-[#3B1F4A] leading-relaxed max-w-[620px] mb-4">
+          <p
+            key={`li-${i}`}
+            className="font-['Inter'] text-base text-[#3B1F4A] leading-relaxed max-w-[620px] mb-4"
+          >
             {line.replace(/^- /, "")}
           </p>
         );
       }
       if (line.trim()) {
         return (
-          <p key={`p-${i}`} className="font-['Inter'] text-base text-[#3B1F4A] leading-relaxed max-w-[620px] mb-4">
+          <p
+            key={`p-${i}`}
+            className="font-['Inter'] text-base text-[#3B1F4A] leading-relaxed max-w-[620px] mb-4"
+          >
             {line}
           </p>
         );
@@ -196,8 +220,8 @@ const CupReadingResult = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-mystical-purple/10 via-background to-rose-gold/10">
-      {/* Header */}
       <div className="container mx-auto px-4 py-6">
+        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <Button
             variant="ghost"
@@ -218,7 +242,9 @@ const CupReadingResult = ({
               size="sm"
               onClick={handlePlayAudio}
               aria-pressed={isPlaying}
-              aria-label={isPlaying ? "Διακοπή αφήγησης" : "Αναπαραγωγή αφήγησης"}
+              aria-label={
+                isPlaying ? "Διακοπή αφήγησης" : "Αναπαραγωγή αφήγησης"
+              }
               className="border-mystical-purple text-mystical-purple hover:bg-mystical-purple hover:text-white"
             >
               {isPlaying ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -226,16 +252,16 @@ const CupReadingResult = ({
           </div>
         </div>
 
-        {/* Grid */}
+        {/* Grid 2-columns */}
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-            {/* Left column (1/3) */}
+            {/* Left column */}
             <div className="lg:col-span-4 space-y-6">
-              {uploadedImage && (
-                <div>
-                  <h3 className="font-['Playfair_Display'] font-semibold text-[#3B1F4A] text-lg mb-4">
-                    Το Φλιτζάνι σας
-                  </h3>
+              <div>
+                <h3 className="font-['Playfair_Display'] font-semibold text-[#3B1F4A] text-lg mb-4">
+                  Το Φλιτζάνι σας
+                </h3>
+                {uploadedImage ? (
                   <div className="max-w-[260px] mx-auto lg:mx-0">
                     <img
                       src={uploadedImage}
@@ -243,36 +269,48 @@ const CupReadingResult = ({
                       className="w-full aspect-square object-cover rounded-xl shadow-lg"
                     />
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="max-w-[260px] mx-auto lg:mx-0 rounded-xl border-2 border-dashed border-[#8B5CF6]/40 bg-[#FBF7FF] p-6 text-center text-sm text-[#7E6A8A]">
+                    Δεν έχει ανέβει εικόνα.
+                  </div>
+                )}
+              </div>
 
-              {detectedSymbols.length > 0 && (
-                <div>
-                  <h3 className="font-['Playfair_Display'] font-semibold text-[#3B1F4A] text-lg mb-4">
-                    Σύμβολα που Εντόπισα
-                  </h3>
+              <div>
+                <h3 className="font-['Playfair_Display'] font-semibold text-[#3B1F4A] text-lg mb-4">
+                  Σύμβολα που Εντόπισα
+                </h3>
+                {detectedSymbols.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {detectedSymbols.map((symbol, index) => (
+                    {detectedSymbols.map((symbol, i) => (
                       <span
-                        key={index}
+                        key={i}
                         className="inline-flex items-center bg-[#F3E8FF] text-[#3B1F4A] text-sm font-medium rounded-full px-3 py-1"
                       >
                         {symbol}
                       </span>
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <p className="text-sm text-[#7E6A8A]">
+                    Δεν εντοπίστηκαν σύμβολα.
+                  </p>
+                )}
+              </div>
             </div>
 
-            {/* Right column (2/3) */}
+            {/* Right column */}
             <div className="lg:col-span-8 space-y-6">
               <Card className="rounded-2xl shadow-[0_8px_32px_rgba(139,92,246,0.08)] border border-[#E9D5FF] overflow-hidden max-w-none">
-                <div className="relative" style={{ backgroundColor: "#FAF3E0" }}>
-                  {/* inner glow */}
+                <div
+                  className="relative"
+                  style={{ backgroundColor: "#FAF3E0" }}
+                >
                   <div
                     className="absolute inset-0 rounded-2xl shadow-inner"
-                    style={{ boxShadow: "inset 0 0 20px rgba(139, 92, 246, 0.05)" }}
+                    style={{
+                      boxShadow: "inset 0 0 20px rgba(139, 92, 246, 0.05)",
+                    }}
                   />
                   <CardContent className="relative p-8">
                     <div className="text-center mb-8">
@@ -284,19 +322,19 @@ const CupReadingResult = ({
                       </p>
                     </div>
 
-                    {/* Content */}
-                    <div className="space-y-4 max-w-[620px]">{formatReading(reading)}</div>
+                    <div className="space-y-4 max-w-[620px]">
+                      {formatReading(reading)}
+                    </div>
                   </CardContent>
                 </div>
               </Card>
 
-              {/* Actions */}
+              {/* Action buttons */}
               <div className="flex flex-wrap justify-center gap-4">
                 <Button
                   onClick={handlePlayAudio}
                   disabled={isPlaying}
                   aria-pressed={isPlaying}
-                  aria-label={isPlaying ? "Διακοπή αφήγησης" : "Αναπαραγωγή αφήγησης"}
                   className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-5 py-3 flex items-center gap-2"
                 >
                   {isPlaying ? (
@@ -324,8 +362,7 @@ const CupReadingResult = ({
                       </>
                     ) : (
                       <>
-                        <Save className="h-4 w-4" />
-                        Αποθήκευσε τον Χρησμό
+                        <Save className="h-4 w-4" /> Αποθήκευσε τον Χρησμό
                       </>
                     )}
                   </Button>
@@ -336,8 +373,7 @@ const CupReadingResult = ({
                   onClick={handleDownloadPdf}
                   className="bg-white border border-[#8B5CF6]/30 hover:bg-[#F3E8FF] rounded-xl px-5 py-3 flex items-center gap-2"
                 >
-                  <Download className="h-4 w-4" />
-                  Λήψη PDF
+                  <Download className="h-4 w-4" /> Λήψη PDF
                 </Button>
 
                 <Button
@@ -345,8 +381,7 @@ const CupReadingResult = ({
                   onClick={handleShare}
                   className="text-[#3B1F4A] hover:text-[#8B5CF6] flex items-center gap-2"
                 >
-                  <Share2 className="h-4 w-4" />
-                  Κοινοποίησε
+                  <Share2 className="h-4 w-4" /> Κοινοποίησε
                 </Button>
               </div>
             </div>
