@@ -63,27 +63,28 @@ const ReadersSection = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {readers.map((reader, index) => {
             const IconComponent = reader.icon;
             return (
               <Card 
                 key={reader.id} 
-                className={`relative overflow-hidden border-2 border-mystical-purple/20 hover:border-mystical-purple/40 transition-all duration-300 hover:scale-105 hover:${reader.shadow} bg-card/50 backdrop-blur-sm animate-fade-in`}
+                className="relative overflow-hidden rounded-2xl shadow-[0_8px_32px_rgba(139,92,246,0.1)] hover:shadow-[0_12px_40px_rgba(139,92,246,0.15)] transition-all duration-300 bg-white flex flex-col h-full animate-fade-in"
                 style={{ animationDelay: `${index * 0.2}s` }}
               >
-                {/* Card Background Gradient */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${reader.gradient} opacity-5`}></div>
+                {/* Specialty Badge */}
+                <div className="absolute top-4 left-4 bg-[#F3E8FF] text-[#3B1F4A] rounded-full px-3 py-1 text-sm font-medium z-10">
+                  {reader.specialty}
+                </div>
                 
-                <CardHeader className="text-center relative z-10">
+                <CardHeader className="text-center relative z-10 pt-16 pb-4">
                   <div className="mx-auto mb-4 relative">
-                    <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-mystical-purple/30 animate-mystical-glow">
+                    <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-mystical-purple/30">
                       <img 
                         src={reader.image} 
                         alt={reader.name}
                         className="w-full h-full object-cover"
                       />
-                      <div className={`absolute inset-0 bg-gradient-to-br ${reader.gradient} opacity-20`}></div>
                       <div className="absolute inset-0 flex items-center justify-center">
                         <IconComponent className="h-6 w-6 text-white drop-shadow-lg" />
                       </div>
@@ -94,7 +95,7 @@ const ReadersSection = () => {
                     </div>
                   </div>
                   
-                  <CardTitle className="text-xl font-mystical text-mystical-purple mb-2">
+                  <CardTitle className="font-mystical font-semibold text-[22px] text-mystical-purple mb-2">
                     {reader.name}
                   </CardTitle>
                   <CardDescription className="text-sm font-medium text-golden">
@@ -102,21 +103,13 @@ const ReadersSection = () => {
                   </CardDescription>
                 </CardHeader>
 
-                <CardContent className="text-center space-y-4 relative z-10">
-                  <div className="bg-mystical-purple/10 rounded-xl p-3 mb-4">
-                    <p className="text-sm font-medium text-mystical-purple">
-                      Ειδικότητα: {reader.specialty}
-                    </p>
-                  </div>
-                  
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                <CardContent className="text-center flex-1 flex flex-col justify-between relative z-10 px-6 pb-6">
+                  <p className="font-elegant font-normal text-base text-[#3B1F4A] leading-relaxed line-clamp-3 mb-6">
                     {reader.description}
                   </p>
 
                   <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full mt-6 hover:bg-mystical-purple/10 hover:border-mystical-purple/50"
+                    className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-5 py-2 shadow-[0_4px_16px_rgba(139,92,246,0.18)] transition"
                   >
                     Διάλεξε {reader.name.split(' ')[0]}
                   </Button>
