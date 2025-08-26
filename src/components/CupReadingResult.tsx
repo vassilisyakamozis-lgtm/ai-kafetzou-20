@@ -3,14 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Volume2,
-  VolumeX,
-  Save,
-  ArrowLeft,
-  Download,
-  Share2,
-} from "lucide-react";
+import { Volume2, VolumeX, Save, ArrowLeft, Download, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,7 +20,6 @@ interface CupReadingResultProps {
   onSave?: (reading: string) => Promise<void>;
 }
 
-// Voice mapping for different personas
 const VOICE_MAPPING = {
   young: { voice: "nova", name: "Νεαρή Μάντισσα", age: "νεανική" },
   experienced: { voice: "shimmer", name: "Έμπειρη Καφετζού", age: "ώριμη" },
@@ -37,8 +29,7 @@ const VOICE_MAPPING = {
 const b64ToBlobUrl = (b64: string, mime = "audio/mpeg") => {
   const byteChars = atob(b64);
   const byteNumbers = new Array(byteChars.length);
-  for (let i = 0; i < byteChars.length; i++)
-    byteNumbers[i] = byteChars.charCodeAt(i);
+  for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
   const byteArray = new Uint8Array(byteNumbers);
   const blob = new Blob([byteArray], { type: mime });
   return URL.createObjectURL(blob);
@@ -55,9 +46,7 @@ const CupReadingResult = ({
   const { toast } = useToast();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(
-    null
-  );
+  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
 
   const voiceConfig =
     VOICE_MAPPING[(readerInfo?.id as keyof typeof VOICE_MAPPING) || "experienced"] ??
@@ -83,7 +72,6 @@ const CupReadingResult = ({
         setIsPlaying(false);
         return;
       }
-
       if (currentAudio) {
         currentAudio.pause();
         currentAudio.currentTime = 0;
@@ -91,17 +79,11 @@ const CupReadingResult = ({
       }
 
       setIsPlaying(true);
-      toast({
-        title: "🔊 Ο Χρησμός σου παίζει…",
-        description: "Άκου προσεκτικά τις προβλέψεις σου",
-      });
+      toast({ title: "🔊 Ο Χρησμός σου παίζει…", description: "Άκου προσεκτικά τις προβλέψεις σου" });
 
-      const { data, error } = await supabase.functions.invoke(
-        "text-to-speech",
-        {
-          body: { text: reading, voice: voiceConfig.voice },
-        }
-      );
+      const { data, error } = await supabase.functions.invoke("text-to-speech", {
+        body: { text: reading, voice: voiceConfig.voice },
+      });
       if (error || !data?.audioContent) throw new Error("TTS failed");
 
       const url = b64ToBlobUrl(data.audioContent);
@@ -123,7 +105,7 @@ const CupReadingResult = ({
       };
 
       await audio.play();
-    } catch (e) {
+    } catch {
       setIsPlaying(false);
       toast({
         title: "Σφάλμα",
@@ -138,10 +120,7 @@ const CupReadingResult = ({
     setIsSaving(true);
     try {
       await onSave(reading);
-      toast({
-        title: "Επιτυχής αποθήκευση",
-        description: "Ο χρησμός αποθηκεύτηκε στον λογαριασμό σας.",
-      });
+      toast({ title: "Επιτυχής αποθήκευση", description: "Ο χρησμός αποθηκεύτηκε στον λογαριασμό σας." });
     } catch {
       toast({
         title: "Σφάλμα αποθήκευσης",
@@ -154,10 +133,7 @@ const CupReadingResult = ({
   };
 
   const handleDownloadPdf = async () => {
-    toast({
-      title: "Σύντομα διαθέσιμο",
-      description: "Η λήψη PDF θα προστεθεί άμεσα.",
-    });
+    toast({ title: "Σύντομα διαθέσιμο", description: "Η λήψη PDF θα προστεθεί άμεσα." });
   };
 
   const handleShare = async () => {
@@ -166,19 +142,13 @@ const CupReadingResult = ({
         await navigator.share({
           title: "Ο Χρησμός μου",
           text: reading,
-          url:
-            typeof window !== "undefined" ? window.location.href : undefined,
+          url: typeof window !== "undefined" ? window.location.href : undefined,
         });
       } else {
         await navigator.clipboard.writeText(
-          `${reading}\n\n${
-            typeof window !== "undefined" ? window.location.href : ""
-          }`
+          `${reading}\n\n${typeof window !== "undefined" ? window.location.href : ""}`
         );
-        toast({
-          title: "Αντιγράφηκε",
-          description: "Ο σύνδεσμος αντιγράφηκε στο πρόχειρο.",
-        });
+        toast({ title: "Αντιγράφηκε", description: "Ο σύνδεσμος αντιγράφηκε στο πρόχειρο." });
       }
     } catch {}
   };
@@ -197,20 +167,14 @@ const CupReadingResult = ({
       }
       if (/^- /.test(line)) {
         return (
-          <p
-            key={`li-${i}`}
-            className="font-['Inter'] text-base text-[#3B1F4A] leading-relaxed max-w-[620px] mb-4"
-          >
+          <p key={`li-${i}`} className="font-['Inter'] text-base text-[#3B1F4A] leading-relaxed max-w-[620px] mb-4">
             {line.replace(/^- /, "")}
           </p>
         );
       }
       if (line.trim()) {
         return (
-          <p
-            key={`p-${i}`}
-            className="font-['Inter'] text-base text-[#3B1F4A] leading-relaxed max-w-[620px] mb-4"
-          >
+          <p key={`p-${i}`} className="font-['Inter'] text-base text-[#3B1F4A] leading-relaxed max-w-[620px] mb-4">
             {line}
           </p>
         );
@@ -223,18 +187,12 @@ const CupReadingResult = ({
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            className="text-mystical-purple hover:text-mystical-purple-dark"
-          >
+          <Button variant="ghost" onClick={onBack} className="text-mystical-purple hover:text-mystical-purple-dark">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Πίσω
           </Button>
 
-          <h1 className="text-2xl font-mystical font-bold text-mystical-purple text-center flex-1">
-            Ο Χρησμός σας
-          </h1>
+          <h1 className="text-2xl font-mystical font-bold text-mystical-purple text-center flex-1">Ο Χρησμός σας</h1>
 
           <div className="flex gap-2 shrink-0">
             <Button
@@ -242,9 +200,7 @@ const CupReadingResult = ({
               size="sm"
               onClick={handlePlayAudio}
               aria-pressed={isPlaying}
-              aria-label={
-                isPlaying ? "Διακοπή αφήγησης" : "Αναπαραγωγή αφήγησης"
-              }
+              aria-label={isPlaying ? "Διακοπή αφήγησης" : "Αναπαραγωγή αφήγησης"}
               className="border-mystical-purple text-mystical-purple hover:bg-mystical-purple hover:text-white"
             >
               {isPlaying ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -252,17 +208,37 @@ const CupReadingResult = ({
           </div>
         </div>
 
-        {/* Grid 2-columns */}
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-            {/* Left column */}
-            <div className="lg:col-span-4 space-y-6">
-              <div>
-                <h3 className="font-['Playfair_Display'] font-semibold text-[#3B1F4A] text-lg mb-4">
-                  Το Φλιτζάνι σας
-                </h3>
+        {/* Single-column content */}
+        <div className="max-w-3xl mx-auto space-y-8">
+          {/* Reading Card */}
+          <Card className="rounded-2xl shadow-[0_8px_32px_rgba(139,92,246,0.08)] border border-[#E9D5FF] overflow-hidden">
+            <div className="relative" style={{ backgroundColor: "#FAF3E0" }}>
+              <div
+                className="absolute inset-0 rounded-2xl shadow-inner"
+                style={{ boxShadow: "inset 0 0 20px rgba(139, 92, 246, 0.05)" }}
+              />
+              <CardContent className="relative p-8">
+                <div className="text-center mb-8">
+                  <h2 className="font-['Playfair_Display'] text-[26px] font-bold bg-gradient-to-r from-[#8B5CF6] to-[#F472B6] bg-clip-text text-transparent mb-2">
+                    Χρησμός από τη {voiceConfig.name}
+                  </h2>
+                  <p className="font-['Inter'] italic text-[#7E6A8A]">με {voiceConfig.age} φωνή και χρόνια εμπειρίας</p>
+                </div>
+
+                <div className="space-y-4 max-w-[620px] mx-auto">{formatReading(reading)}</div>
+              </CardContent>
+            </div>
+          </Card>
+
+          {/* Cup + Symbols (secondary card) */}
+          <Card className="rounded-2xl border border-[#E9D5FF] bg-white/70">
+            <CardContent className="p-6">
+              <h3 className="font-['Playfair_Display'] font-semibold text-[#3B1F4A] text-lg mb-4">Το Φλιτζάνι & Σύμβολα</h3>
+
+              <div className="flex flex-col items-center gap-6">
+                {/* Cup image or placeholder */}
                 {uploadedImage ? (
-                  <div className="max-w-[260px] mx-auto lg:mx-0">
+                  <div className="w-full max-w-[260px]">
                     <img
                       src={uploadedImage}
                       alt="Uploaded cup"
@@ -270,18 +246,14 @@ const CupReadingResult = ({
                     />
                   </div>
                 ) : (
-                  <div className="max-w-[260px] mx-auto lg:mx-0 rounded-xl border-2 border-dashed border-[#8B5CF6]/40 bg-[#FBF7FF] p-6 text-center text-sm text-[#7E6A8A]">
+                  <div className="w-full max-w-[260px] rounded-xl border-2 border-dashed border-[#8B5CF6]/40 bg-[#FBF7FF] p-6 text-center text-sm text-[#7E6A8A]">
                     Δεν έχει ανέβει εικόνα.
                   </div>
                 )}
-              </div>
 
-              <div>
-                <h3 className="font-['Playfair_Display'] font-semibold text-[#3B1F4A] text-lg mb-4">
-                  Σύμβολα που Εντόπισα
-                </h3>
+                {/* Symbols */}
                 {detectedSymbols.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="w-full flex flex-wrap justify-center gap-2">
                     {detectedSymbols.map((symbol, i) => (
                       <span
                         key={i}
@@ -292,99 +264,66 @@ const CupReadingResult = ({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-[#7E6A8A]">
-                    Δεν εντοπίστηκαν σύμβολα.
-                  </p>
+                  <p className="text-sm text-[#7E6A8A]">Δεν εντοπίστηκαν σύμβολα.</p>
                 )}
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Right column */}
-            <div className="lg:col-span-8 space-y-6">
-              <Card className="rounded-2xl shadow-[0_8px_32px_rgba(139,92,246,0.08)] border border-[#E9D5FF] overflow-hidden max-w-none">
-                <div
-                  className="relative"
-                  style={{ backgroundColor: "#FAF3E0" }}
-                >
-                  <div
-                    className="absolute inset-0 rounded-2xl shadow-inner"
-                    style={{
-                      boxShadow: "inset 0 0 20px rgba(139, 92, 246, 0.05)",
-                    }}
-                  />
-                  <CardContent className="relative p-8">
-                    <div className="text-center mb-8">
-                      <h2 className="font-['Playfair_Display'] text-[26px] font-bold bg-gradient-to-r from-[#8B5CF6] to-[#F472B6] bg-clip-text text-transparent mb-2">
-                        Χρησμός από τη {voiceConfig.name}
-                      </h2>
-                      <p className="font-['Inter'] italic text-[#7E6A8A]">
-                        με {voiceConfig.age} φωνή και χρόνια εμπειρίας
-                      </p>
-                    </div>
+          {/* Actions */}
+          <div className="flex flex-wrap justify-center gap-4">
+            <Button
+              onClick={handlePlayAudio}
+              disabled={isPlaying}
+              aria-pressed={isPlaying}
+              className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-5 py-3 flex items-center gap-2"
+            >
+              {isPlaying ? (
+                <>
+                  <VolumeX className="h-4 w-4" /> Σταμάτημα
+                </>
+              ) : (
+                <>
+                  <Volume2 className="h-4 w-4" /> Άκου
+                </>
+              )}
+            </Button>
 
-                    <div className="space-y-4 max-w-[620px]">
-                      {formatReading(reading)}
-                    </div>
-                  </CardContent>
-                </div>
-              </Card>
-
-              {/* Action buttons */}
-              <div className="flex flex-wrap justify-center gap-4">
-                <Button
-                  onClick={handlePlayAudio}
-                  disabled={isPlaying}
-                  aria-pressed={isPlaying}
-                  className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-5 py-3 flex items-center gap-2"
-                >
-                  {isPlaying ? (
-                    <>
-                      <VolumeX className="h-4 w-4" /> Σταμάτημα
-                    </>
-                  ) : (
-                    <>
-                      <Volume2 className="h-4 w-4" /> Άκου
-                    </>
-                  )}
-                </Button>
-
-                {onSave && (
-                  <Button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    variant="outline"
-                    className="bg-white border border-[#8B5CF6]/30 hover:bg-[#F3E8FF] rounded-xl px-5 py-3 flex items-center gap-2"
-                  >
-                    {isSaving ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-                        Αποθήκευση...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4" /> Αποθήκευσε τον Χρησμό
-                      </>
-                    )}
-                  </Button>
+            {onSave && (
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                variant="outline"
+                className="bg-white border border-[#8B5CF6]/30 hover:bg-[#F3E8FF] rounded-xl px-5 py-3 flex items-center gap-2"
+              >
+                {isSaving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                    Αποθήκευση...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" /> Αποθήκευσε τον Χρησμό
+                  </>
                 )}
+              </Button>
+            )}
 
-                <Button
-                  variant="outline"
-                  onClick={handleDownloadPdf}
-                  className="bg-white border border-[#8B5CF6]/30 hover:bg-[#F3E8FF] rounded-xl px-5 py-3 flex items-center gap-2"
-                >
-                  <Download className="h-4 w-4" /> Λήψη PDF
-                </Button>
+            <Button
+              variant="outline"
+              onClick={handleDownloadPdf}
+              className="bg-white border border-[#8B5CF6]/30 hover:bg-[#F3E8FF] rounded-xl px-5 py-3 flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" /> Λήψη PDF
+            </Button>
 
-                <Button
-                  variant="ghost"
-                  onClick={handleShare}
-                  className="text-[#3B1F4A] hover:text-[#8B5CF6] flex items-center gap-2"
-                >
-                  <Share2 className="h-4 w-4" /> Κοινοποίησε
-                </Button>
-              </div>
-            </div>
+            <Button
+              variant="ghost"
+              onClick={handleShare}
+              className="text-[#3B1F4A] hover:text-[#8B5CF6] flex items-center gap-2"
+            >
+              <Share2 className="h-4 w-4" /> Κοινοποίησε
+            </Button>
           </div>
         </div>
       </div>
