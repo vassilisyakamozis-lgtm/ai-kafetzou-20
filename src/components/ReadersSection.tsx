@@ -24,7 +24,7 @@ const ReadersSection = () => {
       specialty: "Ισορροπία Ζωής & Σοφία",
       description: "Ισορροπημένη οπτική με εμπειρία ζωής. Ιδανική για οικογενειακά θέματα, επαγγελματική καθοδήγηση και προσωπική ανάπτυξη.",
       icon: Crown,
-      image: "/images/tellers/katina-klassiki.png",
+      image: "/lovable-uploads/641dea52-a9d4-48da-8fa1-cd3587bddf48.png",
       gradient: "from-mystical-purple to-mystical-purple-light",
       shadow: "shadow-mystical"
     },
