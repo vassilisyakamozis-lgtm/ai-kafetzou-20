@@ -36,7 +36,7 @@ const ReadersSection = () => {
       specialty: "Βαθιά Σοφία & Μοίρα",
       description: "Αρχαία σοφία και βαθιές προβλέψεις. Καλύτερη για σημαντικές αποφάσεις ζωής, πνευματική καθοδήγηση και κατανόηση του πεπρωμένου.",
       icon: Sparkles,
-      image: "/images/tellers/mystic-woman.png",
+      image: "/lovable-uploads/3582ea76-81e8-46ca-9385-310925d7d211.png",
       gradient: "from-golden to-golden-light",
       shadow: "shadow-golden"
     }
