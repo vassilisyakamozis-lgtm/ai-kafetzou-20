@@ -44,14 +44,13 @@ const HeroSection = () => {
 
           {/* Hero Text */}
           <div className="space-y-6 mb-12">
-            <h1 className="text-5xl md:text-7xl font-mystical font-bold text-mystical-purple leading-tight">
-              Ανακάλυψε τη
-              <span className="block bg-gradient-golden bg-clip-text text-transparent">
-                Μυστική σου Μοίρα
+            <h1 className="text-5xl md:text-7xl font-mystical font-bold leading-tight">
+              <span className="bg-gradient-to-r from-[#8B5CF6] via-[#F472B6] to-[#F59E0B] text-transparent bg-clip-text">
+                Ανακάλυψε τη Μυστική σου Μοίρα
               </span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl font-elegant font-normal text-[#3B1F4A] max-w-[640px] mx-auto leading-relaxed">
               Η αρχαία τέχνη της καφετζούς συναντά την τεχνητή νοημοσύνη. Ανέβασε το φλιτζάνι σου, 
               διάλεξε την καφετζού σου και αποκάλυψε τα μυστικά που κρύβουν τα κατακάθια του καφέ σου.
             </p>
@@ -59,13 +58,13 @@ const HeroSection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-            <Button size="lg" className="w-full sm:w-auto bg-[#8B5CF6] hover:bg-[#7C3AED] text-white rounded-2xl px-6 py-3 shadow-[0_8px_32px_rgba(139,92,246,0.18)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8B5CF6] font-semibold" asChild>
+            <Button size="lg" className="w-full sm:w-auto bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-2xl px-6 py-3 shadow-[0_8px_32px_rgba(139,92,246,0.18)] transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8B5CF6]" asChild>
               <Link to="/cup">
                 <Sparkles className="mr-2 h-5 w-5" />
                 Ξεκίνα την πρώτη Ανάγνωση
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="w-full sm:w-auto">
+            <Button size="lg" className="w-full sm:w-auto border border-[#8B5CF6]/30 text-[#3B1F4A] bg-white hover:bg-[#F3E8FF] rounded-2xl px-6 py-3 transition">
               <Eye className="mr-2 h-5 w-5" />
               Δες Demo
             </Button>
