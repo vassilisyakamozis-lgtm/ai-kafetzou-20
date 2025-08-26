@@ -59,7 +59,7 @@ const HeroSection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-            <Button size="lg" variant="mystical" className="w-full sm:w-auto" asChild>
+            <Button size="lg" className="w-full sm:w-auto bg-[#8B5CF6] hover:bg-[#7C3AED] text-white rounded-2xl px-6 py-3 shadow-[0_8px_32px_rgba(139,92,246,0.18)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8B5CF6] font-semibold" asChild>
               <Link to="/cup">
                 <Sparkles className="mr-2 h-5 w-5" />
                 Ξεκίνα την πρώτη Ανάγνωση
