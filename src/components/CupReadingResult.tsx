@@ -125,20 +125,17 @@ const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols 
       // Section headings (###)
       if (line.match(/^### \d+\./)) {
         return (
-          <h3 key={index} className="font-mystical font-semibold text-[#3B1F4A] text-xl mb-2 mt-6 first:mt-0 border-b-2 border-[#F3E8FF] w-fit pb-1">
+          <h3 key={index} className="font-mystical font-bold text-[#3B1F4A] text-xl mb-2 mt-6 first:mt-0 border-b-2 border-[#E9D5FF] w-fit pb-1">
             {line.replace(/^### /, '')}
           </h3>
         );
       }
-      // Advice list items
+      // Convert advice list items to regular paragraphs
       if (line.match(/^- /)) {
         return (
-          <div key={index} className="bg-[#F9F5FF] rounded-lg p-4 mt-4 mb-4">
-            <div className="flex items-start gap-2">
-              <span className="text-green-600">✔️</span>
-              <span className="font-elegant text-[#3B1F4A] leading-relaxed">{line.replace(/^- /, '')}</span>
-            </div>
-          </div>
+          <p key={index} className="font-elegant text-base text-[#3B1F4A] leading-relaxed max-w-[620px] mb-4">
+            {line.replace(/^- /, '')}
+          </p>
         );
       }
       // Regular paragraphs
@@ -190,7 +187,7 @@ const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols 
 
         {/* Responsive Grid Layout */}
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr,2fr] gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
             
             {/* Left Column - Image & Symbols */}
             <div className="space-y-6">
@@ -200,7 +197,7 @@ const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols 
                   <h3 className="font-mystical font-semibold text-[#3B1F4A] text-lg mb-4">
                     Το Φλιτζάνι σας
                   </h3>
-                  <div className="max-w-[280px] mx-auto lg:mx-0">
+                  <div className="max-w-[260px] mx-auto lg:mx-0">
                     <img 
                       src={uploadedImage} 
                       alt="Uploaded cup" 
@@ -216,11 +213,11 @@ const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols 
                   <h3 className="font-mystical font-semibold text-[#3B1F4A] text-lg mb-4">
                     Σύμβολα που Εντόπισα
                   </h3>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap">
                     {detectedSymbols.map((symbol, index) => (
                       <span 
                         key={index}
-                        className="bg-[#F3E8FF] text-[#3B1F4A] text-sm rounded-full px-3 py-1 inline-flex"
+                        className="inline-flex items-center bg-[#F3E8FF] text-[#3B1F4A] text-sm font-medium rounded-full px-3 py-1 mr-2 mb-2"
                       >
                         {symbol}
                       </span>
