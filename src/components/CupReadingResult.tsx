@@ -188,54 +188,51 @@ const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols 
           </div>
         </div>
 
-        {/* 2-Column Layout */}
+        {/* Responsive Grid Layout */}
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr,2fr] gap-6 lg:gap-8">
             
             {/* Left Column - Image & Symbols */}
             <div className="space-y-6">
               {/* Uploaded Cup Image */}
               {uploadedImage && (
-                <Card className="rounded-2xl shadow-[0_8px_32px_rgba(139,92,246,0.08)]">
-                  <CardContent className="p-6">
-                    <h3 className="font-mystical font-semibold text-[#3B1F4A] text-lg mb-4">
-                      Το Φλιτζάνι σας
-                    </h3>
-                    <div className="aspect-square overflow-hidden rounded-xl">
-                      <img 
-                        src={uploadedImage} 
-                        alt="Uploaded cup" 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
+                <div>
+                  <h3 className="font-mystical font-semibold text-[#3B1F4A] text-lg mb-4">
+                    Το Φλιτζάνι σας
+                  </h3>
+                  <div className="max-w-[280px] mx-auto lg:mx-0">
+                    <img 
+                      src={uploadedImage} 
+                      alt="Uploaded cup" 
+                      className="w-full aspect-square object-cover rounded-xl shadow-lg"
+                    />
+                  </div>
+                </div>
               )}
 
               {/* Detected Symbols */}
               {detectedSymbols.length > 0 && (
-                <Card className="rounded-2xl shadow-[0_8px_32px_rgba(139,92,246,0.08)]">
-                  <CardContent className="p-6">
-                    <h3 className="font-mystical font-semibold text-[#3B1F4A] text-lg mb-4">
-                      Σύμβολα που Εντόπισα
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {detectedSymbols.map((symbol, index) => (
-                        <span 
-                          key={index}
-                          className="bg-[#F3E8FF] text-[#3B1F4A] text-sm px-3 py-1 rounded-full"
-                        >
-                          {symbol}
-                        </span>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                <div>
+                  <h3 className="font-mystical font-semibold text-[#3B1F4A] text-lg mb-4">
+                    Σύμβολα που Εντόπισα
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {detectedSymbols.map((symbol, index) => (
+                      <span 
+                        key={index}
+                        className="bg-[#F3E8FF] text-[#3B1F4A] text-sm rounded-full px-3 py-1 inline-flex"
+                      >
+                        {symbol}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
 
-            {/* Right Column - Reading Card */}
-            <div>
+            {/* Right Column - Reading Card & Actions */}
+            <div className="space-y-6">
+              {/* Reading Card */}
               <Card className="rounded-2xl shadow-[0_8px_32px_rgba(139,92,246,0.08)] border border-[#E9D5FF] overflow-hidden max-w-[620px]">
                 <div 
                   className="relative"
@@ -266,7 +263,7 @@ const CupReadingResult = ({ reading, readerInfo, uploadedImage, detectedSymbols 
               </Card>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap justify-center gap-4 mt-6">
+              <div className="flex flex-wrap justify-center gap-4">
                 <Button
                   onClick={handlePlayAudio}
                   disabled={isPlaying}
