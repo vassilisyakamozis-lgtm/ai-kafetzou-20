@@ -42,15 +42,15 @@ const Cup = () => {
       name: "Ρένα η μοντέρνα",
       description: "Φρέσκες προβλέψεις με νεανική αισιοδοξία",
       icon: Heart,
-      image: "/images/tellers/modern-woman.png",
+      image: "/images/tellers/modern-woman.png?v=2",
       gradient: "from-rose-gold to-soft-pink",
     },
     {
       id: "experienced",
-      name: "Κατίνα η Σμυρνιά",
+      name: "Μαίρη η ψαγμένη",
       description: "Ισορροπημένη οπτική με εμπειρία ζωής",
       icon: Crown,
-      image: "/images/tellers/katina-klassiki.png",
+      image: "/images/tellers/katina-klassiki.png?v=2",
       gradient: "from-mystical-purple to-mystical-purple-light",
     },
     {
@@ -58,7 +58,7 @@ const Cup = () => {
       name: "Ισιδώρα η πνευματική",
       description: "Αρχαία σοφία και βαθιές προβλέψεις",
       icon: Sparkles,
-      image: "/images/tellers/mystic-woman.png",
+      image: "/images/tellers/mystic-woman.png?v=2",
       gradient: "from-golden to-golden-light",
     },
   ];
