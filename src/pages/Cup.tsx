@@ -32,20 +32,15 @@ const Cup = () => {
   const [selectedReader, setSelectedReader] = useState<{ id: string; name: string; description: string } | null>(null);
 
   const form = useForm<CupReadingForm>({
-    defaultValues: {
-      reader: "",
-      category: "",
-      mood: "",
-      question: "",
-      image: null,
-    },
+    defaultValues: { reader: "", category: "", mood: "", question: "", image: null },
   });
 
+  // ✅ σωστά images
   const readers = [
     {
       id: "young",
       name: "Ρένα η μοντέρνα",
-      description: "Φρέσκιες προβλέψεις με νεανική αισιοδοξία",
+      description: "Φρέσκες προβλέψεις με νεανική αισιοδοξία",
       icon: Heart,
       image: "/images/tellers/modern-woman.png",
       gradient: "from-rose-gold to-soft-pink",
@@ -69,61 +64,38 @@ const Cup = () => {
   ];
 
   const categories = [
-    "Αγάπη & Σχέσεις",
-    "Καριέρα & Εργασία",
-    "Υγεία & Ευεξία",
-    "Οικογένεια & Φίλοι",
-    "Χρήματα & Οικονομικά",
-    "Ταξίδια & Περιπέτειες",
-    "Πνευματική Ανάπτυξη",
-    "Γενικό Μέλλον",
+    "Αγάπη & Σχέσεις", "Καριέρα & Εργασία", "Υγεία & Ευεξία", "Οικογένεια & Φίλοι",
+    "Χρήματα & Οικονομικά", "Ταξίδια & Περιπέτειες", "Πνευματική Ανάπτυξη", "Γενικό Μέλλον",
   ];
 
   const moods = [
-    "Χαρούμενη/ος",
-    "Ανήσυχη/ος",
-    "Ελπιδοφόρα/ος",
-    "Μπερδεμένη/ος",
-    "Ενθουσιασμένη/ος",
-    "Λυπημένη/ος",
-    "Αισιόδοξη/ος",
-    "Φοβισμένη/ος",
+    "Χαρούμενη/ος","Ανήσυχη/ος","Ελπιδοφόρα/ος","Μπερδεμένη/ος","Ενθουσιασμένη/ος","Λυπημένη/ος","Αισιόδοξη/ος","Φοβισμένη/ος",
   ];
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onload = (e) => setImagePreview(e.target?.result as string);
-      reader.readAsDataURL(file);
+      const r = new FileReader();
+      r.onload = ev => setImagePreview(ev.target?.result as string);
+      r.readAsDataURL(file);
     }
   };
 
   const onSubmit = async (data: CupReadingForm) => {
     if (!selectedImage) {
-      toast({
-        title: "Παρακαλώ ανεβάστε μια εικόνα",
-        description: "Χρειαζόμαστε την εικόνα του φλιτζανιού σας για την ανάγνωση.",
-        variant: "destructive",
-      });
+      toast({ title: "Παρακαλώ ανεβάστε μια εικόνα", description: "Χρειαζόμαστε την εικόνα του φλιτζανιού σας.", variant: "destructive" });
       return;
     }
-
     setIsLoading(true);
-    const readerInfo = readers.find((r) => r.id === data.reader);
+    const readerInfo = readers.find(r => r.id === data.reader);
     setSelectedReader(readerInfo || null);
-
     try {
       const result = await getCupReading(data, selectedImage);
       if (result) setReadingResult(result);
-    } catch (error) {
-      console.error("Error getting cup reading:", error);
-      toast({
-        title: "Σφάλμα",
-        description: "Κάτι πήγε στραβά. Παρακαλώ δοκιμάστε ξανά.",
-        variant: "destructive",
-      });
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Σφάλμα", description: "Κάτι πήγε στραβά. Δοκιμάστε ξανά.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -131,27 +103,16 @@ const Cup = () => {
 
   const getCupReading = async (formData: CupReadingForm, imageFile: File): Promise<string | null> => {
     const imageBase64 = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        resolve(result.split(",")[1]);
-      };
-      reader.readAsDataURL(imageFile);
+      const r = new FileReader();
+      r.onload = (e) => resolve((e.target?.result as string).split(",")[1]);
+      r.readAsDataURL(imageFile);
     });
 
-    const readerName = readers.find((r) => r.id === formData.reader)?.name || "Καφετζού";
-
+    const readerName = readers.find(r => r.id === formData.reader)?.name || "Καφετζού";
     const { data, error } = await supabase.functions.invoke("cup-reading", {
-      body: {
-        reader: readerName,
-        category: formData.category,
-        mood: formData.mood,
-        question: formData.question,
-        imageBase64,
-      },
+      body: { reader: readerName, category: formData.category, mood: formData.mood, question: formData.question, imageBase64 },
     });
-
-    if (error) throw new Error("Παρουσιάστηκε σφάλμα κατά την επικοινωνία με το σύστημα ανάγνωσης.");
+    if (error) throw new Error("Σφάλμα επικοινωνίας με το σύστημα ανάγνωσης.");
     if (data?.error) throw new Error(data.error);
     if (data?.reading) {
       toast({ title: "Ο χρησμός σας είναι έτοιμος!", description: "Δείτε την ανάγνωση του φλιτζανιού σας." });
@@ -161,28 +122,18 @@ const Cup = () => {
   };
 
   const handleBackToForm = () => {
-    setReadingResult(null);
-    setSelectedReader(null);
-    form.reset();
-    setSelectedImage(null);
-    setImagePreview(null);
+    setReadingResult(null); setSelectedReader(null); form.reset(); setSelectedImage(null); setImagePreview(null);
   };
 
-  const handleSaveReading = async (reading: string) => {
-    console.log("Saving reading:", reading);
-    throw new Error("Η αποθήκευση θα είναι διαθέσιμη μόλις δημιουργήσουμε το σύστημα χρηστών.");
+  const handleSaveReading = async (_reading: string) => {
+    console.log("Saving reading…");
+    throw new Error("Η αποθήκευση θα ενεργοποιηθεί όταν προστεθεί login.");
   };
 
   if (isLoading && selectedReader) return <CupReadingLoader readerName={selectedReader.name} />;
-  if (readingResult && selectedReader)
-    return (
-      <CupReadingResult
-        reading={readingResult}
-        readerInfo={selectedReader}
-        onBack={handleBackToForm}
-        onSave={handleSaveReading}
-      />
-    );
+  if (readingResult && selectedReader) {
+    return <CupReadingResult reading={readingResult} readerInfo={selectedReader} onBack={handleBackToForm} onSave={handleSaveReading} />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -190,10 +141,7 @@ const Cup = () => {
       <header className="border-b border-mystical-purple/20">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link
-              to="/"
-              className="flex items-center gap-2 text-mystical-purple hover:text-mystical-purple/80 transition-colors"
-            >
+            <Link to="/" className="flex items-center gap-2 text-mystical-purple hover:text-mystical-purple/80 transition-colors">
               <ArrowLeft className="h-5 w-5" />
               <span className="font-medium">Επιστροφή</span>
             </Link>
@@ -209,9 +157,7 @@ const Cup = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-mystical font-bold text-mystical-purple mb-4">
-              Ανακαλύψτε τα Μυστικά του Φλιτζανιού σας
-            </h2>
+            <h2 className="text-3xl font-mystical font-bold text-mystical-purple mb-4">Ανακαλύψτε τα Μυστικά του Φλιτζανιού σας</h2>
             <p className="text-lg text-muted-foreground">Συμπληρώστε τα παρακάτω στοιχεία για μια προσωποποιημένη ανάγνωση</p>
           </div>
 
@@ -231,38 +177,28 @@ const Cup = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            className="grid md:grid-cols-3 gap-4"
-                          >
+                          <RadioGroup onValueChange={field.onChange} value={field.value} className="grid md:grid-cols-3 gap-4">
                             {readers.map((reader) => {
                               const IconComponent = reader.icon;
                               return (
                                 <div key={reader.id} className="relative">
                                   <RadioGroupItem value={reader.id} id={reader.id} className="peer sr-only" />
+                                  {/* FULL-BLEED square image on top, text below */}
                                   <Label
                                     htmlFor={reader.id}
-                                    className="flex flex-col items-center p-4 border-2 border-mystical-purple/20 rounded-xl cursor-pointer hover:border-mystical-purple/40 peer-checked:border-mystical-purple peer-checked:bg-mystical-purple/5 transition-all"
+                                    className="flex flex-col p-0 overflow-hidden border-2 border-mystical-purple/20 rounded-2xl cursor-pointer hover:border-mystical-purple/40 peer-checked:border-mystical-purple peer-checked:bg-white transition-all"
                                   >
-                                    {/* ΤΕΤΡΑΓΩΝΟ PLACEHOLDER / ΕΙΚΟΝΑ – force square */}
-                                    <div className="relative w-28 aspect-square overflow-hidden !rounded-2xl border-2 border-mystical-purple/25 mb-3 shadow-sm">
-                                      <img
-                                        src={reader.image}
-                                        alt={reader.name}
-                                        className="absolute inset-0 h-full w-full object-cover !rounded-none"
-                                        loading="lazy"
-                                      />
-                                      <div
-                                        className={`absolute inset-0 bg-gradient-to-br ${reader.gradient} opacity-10 pointer-events-none`}
-                                      />
+                                    <div className="w-full aspect-square overflow-hidden">
+                                      <img src={reader.image} alt={reader.name} className="h-full w-full object-cover" loading="lazy" />
+                                      {/* Προαιρετικά μικρό icon επάνω δεξιά */}
                                       <div className="absolute right-2 top-2">
                                         <IconComponent className="h-5 w-5 text-white drop-shadow" />
                                       </div>
                                     </div>
-
-                                    <h3 className="font-medium text-mystical-purple text-center">{reader.name}</h3>
-                                    <p className="text-sm text-muted-foreground text-center mt-1">{reader.description}</p>
+                                    <div className="px-4 py-3 text-center">
+                                      <h3 className="font-medium text-mystical-purple">{reader.name}</h3>
+                                      <p className="text-sm text-muted-foreground mt-1">{reader.description}</p>
+                                    </div>
                                   </Label>
                                 </div>
                               );
@@ -276,7 +212,7 @@ const Cup = () => {
                 </CardContent>
               </Card>
 
-              {/* Category Selection */}
+              {/* Category */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-mystical-purple">Τομέας Ενδιαφέροντος</CardTitle>
@@ -291,15 +227,9 @@ const Cup = () => {
                       <FormItem>
                         <FormControl>
                           <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Επιλέξτε τομέα..." />
-                            </SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder="Επιλέξτε τομέα..." /></SelectTrigger>
                             <SelectContent>
-                              {categories.map((category) => (
-                                <SelectItem key={category} value={category}>
-                                  {category}
-                                </SelectItem>
-                              ))}
+                              {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -310,7 +240,7 @@ const Cup = () => {
                 </CardContent>
               </Card>
 
-              {/* Mood Selection */}
+              {/* Mood */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-mystical-purple">Συναισθηματική Κατάσταση</CardTitle>
@@ -325,15 +255,9 @@ const Cup = () => {
                       <FormItem>
                         <FormControl>
                           <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Επιλέξτε διάθεση..." />
-                            </SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder="Επιλέξτε διάθεση..." /></SelectTrigger>
                             <SelectContent>
-                              {moods.map((mood) => (
-                                <SelectItem key={mood} value={mood}>
-                                  {mood}
-                                </SelectItem>
-                              ))}
+                              {moods.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -344,7 +268,7 @@ const Cup = () => {
                 </CardContent>
               </Card>
 
-              {/* Optional Question */}
+              {/* Question */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-mystical-purple">Ερώτηση (Προαιρετικό)</CardTitle>
@@ -357,11 +281,7 @@ const Cup = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Textarea
-                            placeholder="π.χ. Θα βρω αγάπη φέτος; Πότε θα αλλάξει η καριέρα μου;"
-                            className="min-h-[100px] resize-none"
-                            {...field}
-                          />
+                          <Textarea placeholder="π.χ. Θα βρω αγάπη φέτος; Πότε θα αλλάξει η καριέρα μου;" className="min-h-[100px] resize-none" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -370,7 +290,7 @@ const Cup = () => {
                 </CardContent>
               </Card>
 
-              {/* Image Upload */}
+              {/* Upload */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-mystical-purple">Φωτογραφία Φλιτζανιού</CardTitle>
@@ -380,9 +300,7 @@ const Cup = () => {
                   <div className="flex flex-col items-center space-y-6">
                     <div className="text-center space-y-2">
                       <h3 className="font-mystical text-[24px] font-semibold text-[#3B1F4A]">Ανέβασε το Φλιτζάνι σου ☕</h3>
-                      <p className="font-elegant text-sm text-[#7E6A8A] max-w-[400px] mx-auto">
-                        Σύρε & άφησε την εικόνα ή κάνε κλικ για επιλογή. Δεκτά αρχεία: JPG/PNG έως 8MB.
-                      </p>
+                      <p className="font-elegant text-sm text-[#7E6A8A] max-w-[400px] mx-auto">Σύρε & άφησε την εικόνα ή κάνε κλικ για επιλογή. Δεκτά αρχεία: JPG/PNG έως 8MB.</p>
                     </div>
 
                     <div className="w-full max-w-md">
@@ -393,21 +311,14 @@ const Cup = () => {
                         {isLoading ? (
                           <div className="flex flex-col items-center space-y-4 w-full">
                             <div className="w-full max-w-xs bg-[#E9D5FF] rounded-full h-2">
-                              <div className="bg-[#8B5CF6] h-2 rounded-full animate-pulse" style={{ width: "60%" }}></div>
+                              <div className="bg-[#8B5CF6] h-2 rounded-full animate-pulse" style={{ width: "60%" }} />
                             </div>
                             <p className="text-[#3B1F4A] font-medium">Γίνεται μεταφόρτωση…</p>
                           </div>
                         ) : imagePreview ? (
                           <div className="flex flex-col items-center space-y-4">
-                            <img
-                              src={imagePreview}
-                              alt="Φλιτζάνι προεπισκόπηση"
-                              className="w-32 h-32 object-cover rounded-xl border-2 border-[#8B5CF6]/20"
-                            />
-                            <Button
-                              type="submit"
-                              className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-6 py-3 shadow-[0_4px_16px_rgba(139,92,246,0.18)] transition"
-                            >
+                            <img src={imagePreview} alt="Φλιτζάνι προεπισκόπηση" className="w-32 h-32 object-cover rounded-xl border-2 border-[#8B5CF6]/20" />
+                            <Button type="submit" className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-6 py-3 shadow-[0_4px_16px_rgba(139,92,246,0.18)] transition">
                               Προχώρα στην Ανάλυση
                             </Button>
                           </div>
@@ -418,7 +329,6 @@ const Cup = () => {
                           </div>
                         )}
                       </Label>
-
                       <Input id="image-upload" type="file" accept="image/*" onChange={handleImageChange} className="sr-only" />
                     </div>
                   </div>
@@ -427,12 +337,7 @@ const Cup = () => {
 
               {!imagePreview && (
                 <div className="text-center">
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="bg-gradient-to-r from-mystical-purple to-mystical-purple-light text-white px-8 py-3 text-lg"
-                    disabled={isLoading}
-                  >
+                  <Button type="submit" size="lg" className="bg-gradient-to-r from-mystical-purple to-mystical-purple-light text-white px-8 py-3 text-lg" disabled={isLoading}>
                     {isLoading ? (
                       <>
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
