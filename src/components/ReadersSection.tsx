@@ -12,7 +12,7 @@ const ReadersSection = () => {
       specialty: "Αγάπη & Νέες Αρχές",
       description: "Φρέσκιες προβλέψεις με νεανική αισιοδοξία. Ιδανική για νέες σχέσεις, αλλαγές καριέρας και δημιουργικές προσπάθειες.",
       icon: Heart,
-      image: "/images/tellers/modern-woman.png",
+      image: "/lovable-uploads/bb07a43a-7bc4-4220-b603-524ea88d69e1.png",
       gradient: "from-rose-gold to-soft-pink",
       shadow: "shadow-rose-gold-light"
     },
