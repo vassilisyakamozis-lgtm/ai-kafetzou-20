@@ -18,7 +18,7 @@ const ReadersSection = () => {
     },
     {
       id: 2,
-      name: "Μαίρη η ψαγμένη", // <- ζητήθηκε
+      name: "Μαίρη η ψαγμένη",
       title: "Traditional Reader",
       age: "45 years",
       specialty: "Ισορροπία Ζωής & Σοφία",
@@ -54,23 +54,27 @@ const ReadersSection = () => {
           </p>
         </div>
 
-        {/* 3 στη σειρά σε desktop */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        {/* Responsive grid: 1 → 2 (sm) → 3 (md) στήλες */}
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {readers.map((reader, index) => {
             const IconComponent = reader.icon;
             return (
               <Card
                 key={reader.id}
-                className="relative overflow-hidden rounded-2xl shadow-[0_8px_24px_rgba(139,92,246,0.12)] hover:shadow-[0_12px_32px_rgba(139,92,246,0.18)] transition-all duration-300 bg-white flex flex-col"
+                className="relative overflow-hidden rounded-2xl bg-white flex flex-col
+                           shadow-[0_8px_24px_rgba(139,92,246,0.12)]
+                           hover:shadow-[0_12px_32px_rgba(139,92,246,0.18)]
+                           transition-all duration-300 hover:-translate-y-0.5"
                 style={{ animationDelay: `${index * 0.15}s` }}
               >
-                {/* Full-bleed τετράγωνη εικόνα στην κορυφή */}
+                {/* Full-bleed τετράγωνη εικόνα */}
                 <div className="w-full aspect-square overflow-hidden">
                   <img
                     src={reader.image}
                     alt={reader.name}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover will-change-transform"
                     loading="lazy"
+                    decoding="async"
                   />
                 </div>
 
