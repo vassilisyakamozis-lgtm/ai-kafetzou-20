@@ -17,6 +17,8 @@ import CupReadingLoader from "@/components/CupReadingLoader";
 
 interface CupReadingForm {
   reader: string;
+  gender: string;      // ✅ ΝΕΟ
+  ageRange: string;    // ✅ ΝΕΟ
   category: string;
   mood: string;
   question?: string;
@@ -32,7 +34,15 @@ const Cup = () => {
   const [selectedReader, setSelectedReader] = useState<{ id: string; name: string; description: string } | null>(null);
 
   const form = useForm<CupReadingForm>({
-    defaultValues: { reader: "", category: "", mood: "", question: "", image: null },
+    defaultValues: { 
+      reader: "", 
+      gender: "",      // ✅ ΝΕΟ
+      ageRange: "",    // ✅ ΝΕΟ
+      category: "", 
+      mood: "", 
+      question: "", 
+      image: null 
+    },
   });
 
   // ✅ Supabase public URLs + «Μαίρη η ψαγμένη»
@@ -65,6 +75,10 @@ const Cup = () => {
       gradient: "from-golden to-golden-light",
     },
   ];
+
+  // ✅ ΝΕΕΣ λίστες
+  const genders = ["Άνδρας", "Γυναίκα", "Άλλο"];
+  const ageRanges = ["17-24", "25-34", "35-44", "45-54", "55-64", "64+"];
 
   const categories = [
     "Αγάπη & Σχέσεις",
@@ -129,9 +143,13 @@ const Cup = () => {
     });
 
     const readerName = readers.find((r) => r.id === formData.reader)?.name || "Καφετζού";
+
+    // ✅ ΠΕΡΝΑΜΕ gender & ageRange στο API
     const { data, error } = await supabase.functions.invoke("cup-reading", {
       body: {
         reader: readerName,
+        gender: formData.gender,        // ✅
+        ageRange: formData.ageRange,    // ✅
         category: formData.category,
         mood: formData.mood,
         question: formData.question,
@@ -245,7 +263,6 @@ const Cup = () => {
                                         loading="lazy"
                                         decoding="async"
                                       />
-                                      {/* Προαιρετικό μικρό icon πάνω δεξιά */}
                                       <div className="absolute right-2 top-2">
                                         <IconComponent className="h-5 w-5 text-white drop-shadow" />
                                       </div>
@@ -267,6 +284,71 @@ const Cup = () => {
                       </FormItem>
                     )}
                   />
+                </CardContent>
+              </Card>
+
+              {/* ✅ ΝΕΟ BLOCK: Φύλο & Ηλικιακό εύρος (μπαίνει εδώ πριν τον Τομέα ενδιαφέροντος) */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-mystical-purple">Στοιχεία Προφίλ</CardTitle>
+                  <CardDescription>Θα βοηθήσουν να προσαρμοστεί καλύτερα ο χρησμός στο ύφος και το περιεχόμενο.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Φύλο */}
+                    <FormField
+                      control={form.control}
+                      name="gender"
+                      rules={{ required: "Παρακαλώ επιλέξτε φύλο" }}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Φύλο</FormLabel>
+                          <FormControl>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Επιλέξτε..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {genders.map((g) => (
+                                  <SelectItem key={g} value={g}>
+                                    {g}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Ηλικιακό εύρος */}
+                    <FormField
+                      control={form.control}
+                      name="ageRange"
+                      rules={{ required: "Παρακαλώ επιλέξτε ηλικιακό εύρος" }}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ηλικιακό εύρος</FormLabel>
+                          <FormControl>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Επιλέξτε..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ageRanges.map((a) => (
+                                  <SelectItem key={a} value={a}>
+                                    {a}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 
