@@ -10,89 +10,76 @@ const ReadersSection = () => {
       title: "Modern Oracle",
       age: "25 years",
       specialty: "Αγάπη & Νέες Αρχές",
-      description: "Φρέσκιες προβλέψεις με νεανική αισιοδοξία. Ιδανική για νέες σχέσεις, αλλαγές καριέρας και δημιουργικές προσπάθειες.",
+      description:
+        "Φρέσκες προβλέψεις με νεανική αισιοδοξία. Ιδανική για νέες σχέσεις, αλλαγές καριέρας και δημιουργικές προσπάθειες.",
       icon: Heart,
-      image: "/lovable-uploads/rena.png",
-      gradient: "from-rose-gold to-soft-pink",
-      shadow: "shadow-rose-gold-light"
+      image:
+        "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/modern%20woman.png?v=2",
     },
     {
       id: 2,
-      name: "Κατίνα η Σμυρνιά",
+      name: "Μαίρη η ψαγμένη", // <- ζητήθηκε
       title: "Traditional Reader",
-      age: "45 years", 
+      age: "45 years",
       specialty: "Ισορροπία Ζωής & Σοφία",
-      description: "Ισορροπημένη οπτική με εμπειρία ζωής. Ιδανική για οικογενειακά θέματα, επαγγελματική καθοδήγηση και προσωπική ανάπτυξη.",
+      description:
+        "Ισορροπημένη οπτική με εμπειρία ζωής. Ιδανική για οικογενειακά θέματα, επαγγελματική καθοδήγηση και προσωπική ανάπτυξη.",
       icon: Crown,
-      image: "/lovable-uploads/katina.png",
-      gradient: "from-mystical-purple to-mystical-purple-light",
-      shadow: "shadow-mystical"
+      image:
+        "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/katina-klassiki.png?v=2",
     },
     {
       id: 3,
-      name: "Ισισδώρα η πνευματική",
+      name: "Ισιδώρα η πνευματική",
       title: "Spiritual Grandmother",
       age: "70 years",
       specialty: "Βαθιά Σοφία & Μοίρα",
-      description: "Αρχαία σοφία και βαθιές προβλέψεις. Καλύτερη για σημαντικές αποφάσεις ζωής, πνευματική καθοδήγηση και κατανόηση του πεπρωμένου.",
+      description:
+        "Αρχαία σοφία και βαθιές προβλέψεις. Για σημαντικές αποφάσεις ζωής, πνευματική καθοδήγηση και κατανόηση του πεπρωμένου.",
       icon: Sparkles,
-      image: "/lovable-uploads/isidora.png",
-      gradient: "from-golden to-golden-light",
-      shadow: "shadow-golden"
-    }
+      image:
+        "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/mystic%20woman.png?v=2",
+    },
   ];
 
   return (
     <section id="readers" className="py-20 bg-background relative overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute inset-0">
-        <div className="absolute top-10 right-20 w-40 h-40 bg-mystical-purple/5 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-20 left-10 w-32 h-32 bg-golden/10 rounded-full blur-xl"></div>
-      </div>
-
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-mystical font-bold text-mystical-purple mb-6">
             Διάλεξε την Μυστική σου Καφετζού
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Κάθε καφετζού φέρνει την μοναδική της οπτική και σοφία για να ερμηνεύσει τα ιερά σύμβολα στο φλιτζάνι σου.
+            Κάθε καφετζού φέρνει τη μοναδική της οπτική και σοφία.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        {/* 3 στη σειρά σε desktop */}
+        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {readers.map((reader, index) => {
             const IconComponent = reader.icon;
             return (
-              <Card 
-                key={reader.id} 
-                className="relative overflow-hidden rounded-2xl shadow-[0_8px_32px_rgba(139,92,246,0.1)] hover:shadow-[0_12px_40px_rgba(139,92,246,0.15)] transition-all duration-300 bg-white flex flex-col h-full animate-fade-in"
-                style={{ animationDelay: `${index * 0.2}s` }}
+              <Card
+                key={reader.id}
+                className="relative overflow-hidden rounded-2xl shadow-[0_8px_24px_rgba(139,92,246,0.12)] hover:shadow-[0_12px_32px_rgba(139,92,246,0.18)] transition-all duration-300 bg-white flex flex-col"
+                style={{ animationDelay: `${index * 0.15}s` }}
               >
-                {/* Specialty Badge */}
-                <div className="absolute top-4 left-4 bg-[#F3E8FF] text-[#3B1F4A] rounded-full px-3 py-1 text-sm font-medium z-10">
-                  {reader.specialty}
+                {/* Full-bleed τετράγωνη εικόνα στην κορυφή */}
+                <div className="w-full aspect-square overflow-hidden">
+                  <img
+                    src={reader.image}
+                    alt={reader.name}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
                 </div>
-                
-                <CardHeader className="text-center relative z-10 pt-16 pb-4">
-                  <div className="mx-auto mb-4 relative">
-                    <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-mystical-purple/30">
-                      <img 
-                        src={reader.image} 
-                        alt={reader.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <IconComponent className="h-6 w-6 text-white drop-shadow-lg" />
-                      </div>
-                    </div>
-                    {/* Age Badge */}
-                    <div className="absolute -bottom-2 -right-2 bg-background border-2 border-mystical-purple/30 rounded-full px-2 py-1 text-xs font-medium text-mystical-purple">
-                      {reader.age}
-                    </div>
+
+                <CardHeader className="text-center pb-2">
+                  <div className="flex items-center justify-center gap-2 text-sm text-golden">
+                    <IconComponent className="h-4 w-4" />
+                    <span className="font-medium">{reader.specialty}</span>
                   </div>
-                  
-                  <CardTitle className="font-mystical font-semibold text-[22px] text-mystical-purple mb-2">
+                  <CardTitle className="font-mystical font-semibold text-[22px] text-mystical-purple mt-2">
                     {reader.name}
                   </CardTitle>
                   <CardDescription className="text-sm font-medium text-golden">
@@ -100,30 +87,17 @@ const ReadersSection = () => {
                   </CardDescription>
                 </CardHeader>
 
-                <CardContent className="text-center flex-1 flex flex-col justify-between relative z-10 px-6 pb-6">
-                  <p className="font-elegant font-normal text-base text-[#3B1F4A] leading-relaxed line-clamp-3 mb-6">
+                <CardContent className="text-center flex-1 flex flex-col justify-between px-6 pb-6">
+                  <p className="font-elegant text-base text-[#3B1F4A] leading-relaxed mb-6">
                     {reader.description}
                   </p>
-
-                  <Button 
-                    className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-5 py-2 shadow-[0_4px_16px_rgba(139,92,246,0.18)] transition"
-                  >
-                    Διάλεξε {reader.name.split(' ')[0]}
+                  <Button className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-5 py-2">
+                    Διάλεξε {reader.name.split(" ")[0]}
                   </Button>
                 </CardContent>
               </Card>
             );
           })}
-        </div>
-
-        <div className="text-center mt-12">
-          <p className="text-sm text-muted-foreground mb-6">
-            Μην ανησυχείς - μπορείς πάντα να αλλάξεις καφετζού ανάμεσα στις αναγνώσεις
-          </p>
-          <Button variant="mystical" size="lg">
-            <Sparkles className="mr-2 h-5 w-5" />
-            Ξεκίνα την Πρώτη σου Ανάγνωση
-          </Button>
         </div>
       </div>
     </section>
