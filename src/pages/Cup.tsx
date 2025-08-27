@@ -35,7 +35,7 @@ const Cup = () => {
     defaultValues: { reader: "", category: "", mood: "", question: "", image: null },
   });
 
-  // ✅ Supabase public URLs + σωστή ονομασία «Μαίρη η ψαγμένη»
+  // ✅ Supabase public URLs + «Μαίρη η ψαγμένη»
   const readers = [
     {
       id: "young",
@@ -229,19 +229,19 @@ const Cup = () => {
                             {readers.map((reader) => {
                               const IconComponent = reader.icon;
                               return (
-                                <div key={reader.id} className="relative">
+                                <div key={reader.id} className="relative group">
                                   <RadioGroupItem value={reader.id} id={reader.id} className="peer sr-only" />
                                   {/* FULL-BLEED square image on top, text below */}
                                   <Label
                                     htmlFor={reader.id}
                                     className="flex flex-col p-0 overflow-hidden border-2 border-mystical-purple/20 rounded-2xl cursor-pointer hover:border-mystical-purple/40 peer-checked:border-mystical-purple peer-checked:bg-white transition-all"
                                   >
-                                    {/* Εικόνα ΠΑΝΩ – τετράγωνη full-bleed */}
+                                    {/* Εικόνα ΠΑΝΩ – τετράγωνη full-bleed + hover zoom */}
                                     <div className="w-full aspect-square overflow-hidden relative">
                                       <img
                                         src={reader.image}
                                         alt={reader.name}
-                                        className="h-full w-full object-cover will-change-transform"
+                                        className="h-full w-full object-cover will-change-transform transform-gpu transition-transform duration-300 group-hover:scale-[1.03]"
                                         loading="lazy"
                                         decoding="async"
                                       />
@@ -389,10 +389,7 @@ const Cup = () => {
                         {isLoading ? (
                           <div className="flex flex-col items-center space-y-4 w-full">
                             <div className="w-full max-w-xs bg-[#E9D5FF] rounded-full h-2">
-                              <div
-                                className="bg-[#8B5CF6] h-2 rounded-full animate-pulse"
-                                style={{ width: "60%" }}
-                              />
+                              <div className="bg-[#8B5CF6] h-2 rounded-full animate-pulse" style={{ width: "60%" }} />
                             </div>
                             <p className="text-[#3B1F4A] font-medium">Γίνεται μεταφόρτωση…</p>
                           </div>
@@ -413,9 +410,7 @@ const Cup = () => {
                         ) : (
                           <div className="flex flex-col items-center justify-center space-y-4">
                             <Upload className="w-12 h-12 text-[#8B5CF6]" />
-                            <p className="text-[#3B1F4A] font-medium text-center">
-                              Κάνε κλικ ή σύρε την εικόνα εδώ
-                            </p>
+                            <p className="text-[#3B1F4A] font-medium text-center">Κάνε κλικ ή σύρε την εικόνα εδώ</p>
                           </div>
                         )}
                       </Label>
