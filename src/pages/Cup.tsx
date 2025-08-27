@@ -224,7 +224,7 @@ const Cup = () => {
                           <RadioGroup
                             onValueChange={field.onChange}
                             value={field.value}
-                            className="grid md:grid-cols-3 gap-4"
+                            className="grid sm:grid-cols-2 md:grid-cols-3 gap-4"
                           >
                             {readers.map((reader) => {
                               const IconComponent = reader.icon;
@@ -241,8 +241,9 @@ const Cup = () => {
                                       <img
                                         src={reader.image}
                                         alt={reader.name}
-                                        className="h-full w-full object-cover"
+                                        className="h-full w-full object-cover will-change-transform"
                                         loading="lazy"
+                                        decoding="async"
                                       />
                                       {/* Προαιρετικό μικρό icon πάνω δεξιά */}
                                       <div className="absolute right-2 top-2">
