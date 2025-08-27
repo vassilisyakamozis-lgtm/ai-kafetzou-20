@@ -12,7 +12,7 @@ const ReadersSection = () => {
       specialty: "Αγάπη & Νέες Αρχές",
       description: "Φρέσκιες προβλέψεις με νεανική αισιοδοξία. Ιδανική για νέες σχέσεις, αλλαγές καριέρας και δημιουργικές προσπάθειες.",
       icon: Heart,
-      image: "/lovable-uploads/bb07a43a-7bc4-4220-b603-524ea88d69e1.png",
+      image: "/lovable-uploads/9e23a287-c97e-4abe-9062-906f7547d864.png",
       gradient: "from-rose-gold to-soft-pink",
       shadow: "shadow-rose-gold-light"
     },
@@ -24,7 +24,7 @@ const ReadersSection = () => {
       specialty: "Ισορροπία Ζωής & Σοφία",
       description: "Ισορροπημένη οπτική με εμπειρία ζωής. Ιδανική για οικογενειακά θέματα, επαγγελματική καθοδήγηση και προσωπική ανάπτυξη.",
       icon: Crown,
-      image: "/lovable-uploads/641dea52-a9d4-48da-8fa1-cd3587bddf48.png",
+      image: "/lovable-uploads/katina.png",
       gradient: "from-mystical-purple to-mystical-purple-light",
       shadow: "shadow-mystical"
     },
@@ -36,7 +36,7 @@ const ReadersSection = () => {
       specialty: "Βαθιά Σοφία & Μοίρα",
       description: "Αρχαία σοφία και βαθιές προβλέψεις. Καλύτερη για σημαντικές αποφάσεις ζωής, πνευματική καθοδήγηση και κατανόηση του πεπρωμένου.",
       icon: Sparkles,
-      image: "/lovable-uploads/3582ea76-81e8-46ca-9385-310925d7d211.png",
+      image: "/lovable-uploads/isidora.png",
       gradient: "from-golden to-golden-light",
       shadow: "shadow-golden"
     }
