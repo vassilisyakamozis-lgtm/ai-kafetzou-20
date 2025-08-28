@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Crown, Heart, Sparkles, Upload, Coffee, ArrowLeft } from "lucide-react";
+import { Crown, Heart, Sparkles, Upload, Coffee, ArrowLeft, Check } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,8 +17,6 @@ import CupReadingLoader from "@/components/CupReadingLoader";
 
 interface CupReadingForm {
   reader: string;
-  gender: string;      // ✅ ΝΕΟ
-  ageRange: string;    // ✅ ΝΕΟ
   category: string;
   mood: string;
   question?: string;
@@ -34,26 +32,17 @@ const Cup = () => {
   const [selectedReader, setSelectedReader] = useState<{ id: string; name: string; description: string } | null>(null);
 
   const form = useForm<CupReadingForm>({
-    defaultValues: { 
-      reader: "", 
-      gender: "",      // ✅ ΝΕΟ
-      ageRange: "",    // ✅ ΝΕΟ
-      category: "", 
-      mood: "", 
-      question: "", 
-      image: null 
-    },
+    defaultValues: { reader: "", category: "", mood: "", question: "", image: null },
   });
 
-  // ✅ Supabase public URLs + «Μαίρη η ψαγμένη»
+  // Images / Καφετζούδες
   const readers = [
     {
       id: "young",
       name: "Ρένα η μοντέρνα",
       description: "Φρέσκες προβλέψεις με νεανική αισιοδοξία",
       icon: Heart,
-      image:
-        "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/modern%20woman.png?v=2",
+      image: "/images/tellers/modern-woman.png?v=2",
       gradient: "from-rose-gold to-soft-pink",
     },
     {
@@ -61,8 +50,7 @@ const Cup = () => {
       name: "Μαίρη η ψαγμένη",
       description: "Ισορροπημένη οπτική με εμπειρία ζωής",
       icon: Crown,
-      image:
-        "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/katina-klassiki.png?v=2",
+      image: "/images/tellers/katina-klassiki.png?v=2",
       gradient: "from-mystical-purple to-mystical-purple-light",
     },
     {
@@ -70,15 +58,10 @@ const Cup = () => {
       name: "Ισιδώρα η πνευματική",
       description: "Αρχαία σοφία και βαθιές προβλέψεις",
       icon: Sparkles,
-      image:
-        "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/mystic%20woman.png?v=2",
+      image: "/images/tellers/mystic-woman.png?v=2",
       gradient: "from-golden to-golden-light",
     },
   ];
-
-  // ✅ ΝΕΕΣ λίστες
-  const genders = ["Άνδρας", "Γυναίκα", "Άλλο"];
-  const ageRanges = ["17-24", "25-34", "35-44", "45-54", "55-64", "64+"];
 
   const categories = [
     "Αγάπη & Σχέσεις",
@@ -143,19 +126,16 @@ const Cup = () => {
     });
 
     const readerName = readers.find((r) => r.id === formData.reader)?.name || "Καφετζού";
-
-    // ✅ ΠΕΡΝΑΜΕ gender & ageRange στο API
     const { data, error } = await supabase.functions.invoke("cup-reading", {
       body: {
         reader: readerName,
-        gender: formData.gender,        // ✅
-        ageRange: formData.ageRange,    // ✅
         category: formData.category,
         mood: formData.mood,
         question: formData.question,
         imageBase64,
       },
     });
+
     if (error) throw new Error("Σφάλμα επικοινωνίας με το σύστημα ανάγνωσης.");
     if (data?.error) throw new Error(data.error);
     if (data?.reading) {
@@ -242,37 +222,58 @@ const Cup = () => {
                           <RadioGroup
                             onValueChange={field.onChange}
                             value={field.value}
-                            className="grid sm:grid-cols-2 md:grid-cols-3 gap-4"
+                            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
                           >
                             {readers.map((reader) => {
                               const IconComponent = reader.icon;
                               return (
                                 <div key={reader.id} className="relative group">
+                                  {/* Το input είναι "peer" για να μπορούμε να στοχεύουμε το Label */}
                                   <RadioGroupItem value={reader.id} id={reader.id} className="peer sr-only" />
-                                  {/* FULL-BLEED square image on top, text below */}
+
+                                  {/* Κάρτα/Label που ανταποκρίνεται στο checked state */}
                                   <Label
                                     htmlFor={reader.id}
-                                    className="flex flex-col p-0 overflow-hidden border-2 border-mystical-purple/20 rounded-2xl cursor-pointer hover:border-mystical-purple/40 peer-checked:border-mystical-purple peer-checked:bg-white transition-all"
+                                    className="
+                                      flex flex-col p-0 overflow-hidden rounded-2xl border-2
+                                      border-mystical-purple/20 cursor-pointer bg-white
+                                      transition-all duration-200
+                                      hover:border-mystical-purple/40 hover:shadow-md
+                                      peer-checked:border-mystical-purple
+                                      peer-checked:ring-2 peer-checked:ring-mystical-purple peer-checked:ring-offset-2
+                                    "
                                   >
-                                    {/* Εικόνα ΠΑΝΩ – τετράγωνη full-bleed + hover zoom */}
-                                    <div className="w-full aspect-square overflow-hidden relative">
+                                    <div className="relative w-full aspect-square overflow-hidden">
                                       <img
                                         src={reader.image}
                                         alt={reader.name}
-                                        className="h-full w-full object-cover will-change-transform transform-gpu transition-transform duration-300 group-hover:scale-[1.03]"
                                         loading="lazy"
-                                        decoding="async"
+                                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                                       />
-                                      <div className="absolute right-2 top-2">
-                                        <IconComponent className="h-5 w-5 text-white drop-shadow" />
-                                      </div>
+
+                                      {/* Μικρό check badge όταν είναι selected */}
+                                      <span
+                                        className="
+                                          pointer-events-none
+                                          absolute right-2 top-2 hidden h-7 w-7 items-center justify-center
+                                          rounded-full bg-mystical-purple text-white shadow-lg
+                                          peer-checked:flex
+                                        "
+                                        aria-hidden="true"
+                                      >
+                                        <Check className="h-4 w-4" />
+                                      </span>
                                     </div>
-                                    {/* Κείμενα ΚΑΤΩ */}
+
                                     <div className="px-4 py-3 text-center">
                                       <h3 className="font-medium text-mystical-purple">{reader.name}</h3>
                                       <p className="text-sm text-muted-foreground mt-1">
                                         {reader.description}
                                       </p>
+                                      {/* Προαιρετικό εικονίδιο «χαρακτηριστικού» */}
+                                      <div className="mt-2 flex items-center justify-center gap-1 text-golden/90">
+                                        <IconComponent className="h-4 w-4" />
+                                      </div>
                                     </div>
                                   </Label>
                                 </div>
@@ -284,71 +285,6 @@ const Cup = () => {
                       </FormItem>
                     )}
                   />
-                </CardContent>
-              </Card>
-
-              {/* ✅ ΝΕΟ BLOCK: Φύλο & Ηλικιακό εύρος (μπαίνει εδώ πριν τον Τομέα ενδιαφέροντος) */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-mystical-purple">Στοιχεία Προφίλ</CardTitle>
-                  <CardDescription>Θα βοηθήσουν να προσαρμοστεί καλύτερα ο χρησμός στο ύφος και το περιεχόμενο.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {/* Φύλο */}
-                    <FormField
-                      control={form.control}
-                      name="gender"
-                      rules={{ required: "Παρακαλώ επιλέξτε φύλο" }}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Φύλο</FormLabel>
-                          <FormControl>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Επιλέξτε..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {genders.map((g) => (
-                                  <SelectItem key={g} value={g}>
-                                    {g}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Ηλικιακό εύρος */}
-                    <FormField
-                      control={form.control}
-                      name="ageRange"
-                      rules={{ required: "Παρακαλώ επιλέξτε ηλικιακό εύρος" }}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Ηλικιακό εύρος</FormLabel>
-                          <FormControl>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Επιλέξτε..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {ageRanges.map((a) => (
-                                  <SelectItem key={a} value={a}>
-                                    {a}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
                 </CardContent>
               </Card>
 
@@ -466,12 +402,20 @@ const Cup = () => {
                     <div className="w-full max-w-md">
                       <Label
                         htmlFor="image-upload"
-                        className="flex flex-col items-center justify-center w-full h-80 border-2 border-dashed border-[#8B5CF6] bg-[#FBF7FF] rounded-2xl cursor-pointer hover:border-[#F472B6] hover:bg-[#FDF4FF] transition-all duration-300 shadow-[0_8px_32px_rgba(139,92,246,0.08)] p-8"
+                        className="
+                          flex flex-col items-center justify-center w-full h-80 border-2 border-dashed
+                          border-[#8B5CF6] bg-[#FBF7FF] rounded-2xl cursor-pointer
+                          hover:border-[#F472B6] hover:bg-[#FDF4FF] transition-all duration-300
+                          shadow-[0_8px_32px_rgba(139,92,246,0.08)] p-8
+                        "
                       >
                         {isLoading ? (
                           <div className="flex flex-col items-center space-y-4 w-full">
                             <div className="w-full max-w-xs bg-[#E9D5FF] rounded-full h-2">
-                              <div className="bg-[#8B5CF6] h-2 rounded-full animate-pulse" style={{ width: "60%" }} />
+                              <div
+                                className="bg-[#8B5CF6] h-2 rounded-full animate-pulse"
+                                style={{ width: "60%" }}
+                              />
                             </div>
                             <p className="text-[#3B1F4A] font-medium">Γίνεται μεταφόρτωση…</p>
                           </div>
@@ -492,7 +436,9 @@ const Cup = () => {
                         ) : (
                           <div className="flex flex-col items-center justify-center space-y-4">
                             <Upload className="w-12 h-12 text-[#8B5CF6]" />
-                            <p className="text-[#3B1F4A] font-medium text-center">Κάνε κλικ ή σύρε την εικόνα εδώ</p>
+                            <p className="text-[#3B1F4A] font-medium text-center">
+                              Κάνε κλικ ή σύρε την εικόνα εδώ
+                            </p>
                           </div>
                         )}
                       </Label>
