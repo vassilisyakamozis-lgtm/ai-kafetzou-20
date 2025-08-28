@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Crown, Heart, Sparkles, Upload, Coffee, ArrowLeft, Check } from "lucide-react";
+import { Crown, Heart, Sparkles, Upload, Coffee, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,11 +19,19 @@ interface CupReadingForm {
   reader: string;
   category: string;
   mood: string;
-  question?: string;
-  image: File | null;
   gender: string;
   ageRange: string;
+  question?: string;
+  image: File | null;
 }
+
+const SUPA = "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers";
+const IMG = {
+  rena: `${SUPA}/modern%20woman.png?v=3`,
+  mary: `${SUPA}/katina-klassiki.png?v=3`,
+  isidora: `${SUPA}/mystic%20woman.png?v=3`,
+};
+const FALLBACK = "/placeholder.svg";
 
 const Cup = () => {
   const { toast } = useToast();
@@ -38,35 +46,34 @@ const Cup = () => {
       reader: "",
       category: "",
       mood: "",
-      question: "",
-      image: null,
       gender: "",
       ageRange: "",
+      question: "",
+      image: null,
     },
   });
 
-  // Εικόνες καφετζουδών (τετράγωνες)
   const readers = [
     {
       id: "young",
       name: "Ρένα η μοντέρνα",
       description: "Φρέσκες προβλέψεις με νεανική αισιοδοξία",
       icon: Heart,
-      image: "/images/tellers/modern-woman.png?v=2",
+      image: IMG.rena,
     },
     {
       id: "experienced",
       name: "Μαίρη η ψαγμένη",
       description: "Ισορροπημένη οπτική με εμπειρία ζωής",
       icon: Crown,
-      image: "/images/tellers/katina-klassiki.png?v=2",
+      image: IMG.mary,
     },
     {
       id: "wise",
       name: "Ισιδώρα η πνευματική",
       description: "Αρχαία σοφία και βαθιές προβλέψεις",
       icon: Sparkles,
-      image: "/images/tellers/mystic-woman.png?v=2",
+      image: IMG.isidora,
     },
   ];
 
@@ -76,7 +83,8 @@ const Cup = () => {
   ];
 
   const moods = [
-    "Χαρούμενη/ος","Ανήσυχη/ος","Ελπιδοφόρα/ος","Μπερδεμένη/ος","Ενθουσιασμένη/ος","Λυπημένη/ος","Αισιόδοξη/ος","Φοβισμένη/ος",
+    "Χαρούμενη/ος", "Ανήσυχη/ος", "Ελπιδοφόρα/ος", "Μπερδεμένη/ος",
+    "Ενθουσιασμένη/ος", "Λυπημένη/ος", "Αισιόδοξη/ος", "Φοβισμένη/ος",
   ];
 
   const genders = ["Γυναίκα", "Άνδρας", "Άλλο"];
@@ -84,12 +92,11 @@ const Cup = () => {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setSelectedImage(file);
-      const r = new FileReader();
-      r.onload = (ev) => setImagePreview(ev.target?.result as string);
-      r.readAsDataURL(file);
-    }
+    if (!file) return;
+    setSelectedImage(file);
+    const r = new FileReader();
+    r.onload = ev => setImagePreview(ev.target?.result as string);
+    r.readAsDataURL(file);
   };
 
   const onSubmit = async (data: CupReadingForm) => {
@@ -97,13 +104,14 @@ const Cup = () => {
       toast({
         title: "Παρακαλώ ανεβάστε μια εικόνα",
         description: "Χρειαζόμαστε την εικόνα του φλιτζανιού σας.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
     setIsLoading(true);
     const readerInfo = readers.find(r => r.id === data.reader);
     setSelectedReader(readerInfo || null);
+
     try {
       const result = await getCupReading(data, selectedImage);
       if (result) setReadingResult(result);
@@ -124,16 +132,15 @@ const Cup = () => {
 
     const readerName = readers.find(r => r.id === formData.reader)?.name || "Καφετζού";
 
-    // Στέλνουμε και gender / ageRange (αν το function τα αγνοεί, δεν πειράζει)
     const { data, error } = await supabase.functions.invoke("cup-reading", {
       body: {
         reader: readerName,
         category: formData.category,
         mood: formData.mood,
-        question: formData.question,
-        imageBase64,
         gender: formData.gender,
         ageRange: formData.ageRange,
+        question: formData.question,
+        imageBase64,
       },
     });
 
@@ -160,6 +167,7 @@ const Cup = () => {
   };
 
   if (isLoading && selectedReader) return <CupReadingLoader readerName={selectedReader.name} />;
+
   if (readingResult && selectedReader) {
     return (
       <CupReadingResult
@@ -191,7 +199,7 @@ const Cup = () => {
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-mystical font-bold text-mystical-purple mb-4">
               Ανακαλύψτε τα Μυστικά του Φλιτζανιού σας
@@ -203,7 +211,8 @@ const Cup = () => {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              {/* Reader Selection */}
+
+              {/* Readers */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-mystical-purple">Επιλογή Καφετζούς</CardTitle>
@@ -220,22 +229,19 @@ const Cup = () => {
                           <RadioGroup
                             onValueChange={field.onChange}
                             value={field.value}
-                            className="grid gap-4 sm:grid-cols-2 md:grid-cols-3"
+                            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"
                           >
                             {readers.map((reader) => {
                               const IconComponent = reader.icon;
-                              const checked = field.value === reader.id;
+                              const selected = field.value === reader.id;
                               return (
                                 <div key={reader.id} className="relative">
                                   <RadioGroupItem value={reader.id} id={reader.id} className="peer sr-only" />
                                   <Label
                                     htmlFor={reader.id}
-                                    className={[
-                                      "flex flex-col p-0 overflow-hidden rounded-2xl cursor-pointer transition-all",
-                                      "border-2 border-mystical-purple/20 hover:border-mystical-purple/40",
-                                      "peer-checked:border-mystical-purple peer-checked:ring-2 peer-checked:ring-mystical-purple/60",
-                                      "peer-checked:shadow-[0_10px_24px_rgba(139,92,246,0.25)] bg-white",
-                                    ].join(" ")}
+                                    className={`flex flex-col p-0 overflow-hidden rounded-2xl cursor-pointer transition-all
+                                      border-2 ${selected ? "border-mystical-purple ring-2 ring-mystical-purple/30" : "border-mystical-purple/20 hover:border-mystical-purple/40"}
+                                      bg-white`}
                                   >
                                     <div className="relative w-full aspect-square overflow-hidden">
                                       <img
@@ -243,11 +249,16 @@ const Cup = () => {
                                         alt={reader.name}
                                         className="h-full w-full object-cover"
                                         loading="lazy"
+                                        onError={(e) => {
+                                          const el = e.currentTarget as HTMLImageElement;
+                                          if (el.src !== FALLBACK) el.src = FALLBACK;
+                                        }}
                                       />
-                                      {checked && (
-                                        <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-mystical-purple px-2.5 py-1 text-xs font-medium text-white shadow">
-                                          <Check className="h-3.5 w-3.5" /> Επιλέχθηκε
-                                        </span>
+                                      {selected && (
+                                        <div className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-mystical-purple/90 text-white px-2 py-1 text-xs font-medium shadow">
+                                          <CheckCircle2 className="h-4 w-4" />
+                                          Επιλέχθηκε
+                                        </div>
                                       )}
                                       <div className="absolute right-2 top-2">
                                         <IconComponent className="h-5 w-5 text-white drop-shadow" />
@@ -270,35 +281,28 @@ const Cup = () => {
                 </CardContent>
               </Card>
 
-              {/* Profile (Φύλο & Ηλικιακό εύρος) */}
+              {/* Profile (Gender / Age) */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-mystical-purple">Στοιχεία Προφίλ</CardTitle>
                   <CardDescription>
-                    Θα βοηθήσουν να προσαρμοστεί καλύτερα ο χρησμός στο ύφος και το περιεχόμενο.
+                    Θα βοηθήσουν να προσαρμοστεί καλύτερα ο χρησμός στο ύφος και το περιεχόμενό του.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {/* Gender */}
+                  <div className="grid md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="gender"
-                      rules={{ required: "Παρακαλώ επιλέξτε φύλο" }}
+                      rules={{ required: "Επιλέξτε φύλο" }}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Φύλο</FormLabel>
                           <FormControl>
                             <Select onValueChange={field.onChange} value={field.value}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Επιλέξτε..." />
-                              </SelectTrigger>
+                              <SelectTrigger><SelectValue placeholder="Επιλέξτε..." /></SelectTrigger>
                               <SelectContent>
-                                {genders.map((g) => (
-                                  <SelectItem key={g} value={g}>
-                                    {g}
-                                  </SelectItem>
-                                ))}
+                                {genders.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}
                               </SelectContent>
                             </Select>
                           </FormControl>
@@ -306,26 +310,18 @@ const Cup = () => {
                         </FormItem>
                       )}
                     />
-
-                    {/* Age range */}
                     <FormField
                       control={form.control}
                       name="ageRange"
-                      rules={{ required: "Παρακαλώ επιλέξτε ηλικιακό εύρος" }}
+                      rules={{ required: "Επιλέξτε ηλικιακό εύρος" }}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Ηλικιακό εύρος</FormLabel>
                           <FormControl>
                             <Select onValueChange={field.onChange} value={field.value}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Επιλέξτε..." />
-                              </SelectTrigger>
+                              <SelectTrigger><SelectValue placeholder="Επιλέξτε..." /></SelectTrigger>
                               <SelectContent>
-                                {ageRanges.map((a) => (
-                                  <SelectItem key={a} value={a}>
-                                    {a}
-                                  </SelectItem>
-                                ))}
+                                {ageRanges.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
                               </SelectContent>
                             </Select>
                           </FormControl>
@@ -352,15 +348,9 @@ const Cup = () => {
                       <FormItem>
                         <FormControl>
                           <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Επιλέξτε τομέα..." />
-                            </SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder="Επιλέξτε τομέα..." /></SelectTrigger>
                             <SelectContent>
-                              {categories.map((c) => (
-                                <SelectItem key={c} value={c}>
-                                  {c}
-                                </SelectItem>
-                              ))}
+                              {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -386,15 +376,9 @@ const Cup = () => {
                       <FormItem>
                         <FormControl>
                           <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Επιλέξτε διάθεση..." />
-                            </SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder="Επιλέξτε διάθεση..." /></SelectTrigger>
                             <SelectContent>
-                              {moods.map((m) => (
-                                <SelectItem key={m} value={m}>
-                                  {m}
-                                </SelectItem>
-                              ))}
+                              {moods.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -440,9 +424,7 @@ const Cup = () => {
                 <CardContent>
                   <div className="flex flex-col items-center space-y-6">
                     <div className="text-center space-y-2">
-                      <h3 className="font-mystical text-[24px] font-semibold text-[#3B1F4A]">
-                        Ανέβασε το Φλιτζάνι σου ☕
-                      </h3>
+                      <h3 className="font-mystical text-[24px] font-semibold text-[#3B1F4A]">Ανέβασε το Φλιτζάνι σου ☕</h3>
                       <p className="font-elegant text-sm text-[#7E6A8A] max-w-[400px] mx-auto">
                         Σύρε & άφησε την εικόνα ή κάνε κλικ για επιλογή. Δεκτά αρχεία: JPG/PNG έως 8MB.
                       </p>
