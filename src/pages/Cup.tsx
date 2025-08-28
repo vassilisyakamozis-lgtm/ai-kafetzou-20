@@ -2,73 +2,42 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-import { useToast } from "@/hooks/use-toast";
 import { Crown, Heart, Sparkles, Upload, Coffee, ArrowLeft, Check } from "lucide-react";
 
 import CupReadingResult from "@/components/CupReadingResult";
 import CupReadingLoader from "@/components/CupReadingLoader";
 
-/** -------- Types -------- */
 interface CupReadingForm {
   reader: string;
   category: string;
   mood: string;
-  gender: string;
-  age_range: string;
+  gender?: string;
+  age_range?: string;
   question?: string;
+  image: File | null;
 }
 
-type ReaderInfo = {
-  id: string;
+type Reader = {
+  id: "young" | "experienced" | "wise";
   name: string;
   description: string;
   icon: any;
-  /** local (public/) path */
-  localSrc: string;
-  /** storage (supabase) fallback path */
-  storagePath: string;
+  image: string;          // local public path (/tellers/...)
+  fallback?: string;      // optional absolute fallback (supabase public URL)
 };
 
-const EDGE_FN = "reading"; // αν θες το παλιό όνομα, βάλε "cup-reading"
-
-/** -------- Data -------- */
-
-const readers: ReaderInfo[] = [
-  {
-    id: "young",
-    name: "Ρένα η μοντέρνα",
-    description: "Φρέσκες προβλέψεις με νεανική αισιοδοξία",
-    icon: Heart,
-    localSrc: "/images/tellers/modern-woman.png",
-    storagePath: "tellers/modern%20woman.png",
-  },
-  {
-    id: "experienced",
-    name: "Μαίρη η ψαγμένη",
-    description: "Ισορροπημένη οπτική με εμπειρία ζωής",
-    icon: Crown,
-    localSrc: "/images/tellers/katina-klassiki.png",
-    storagePath: "tellers/katina-klassiki.png",
-  },
-  {
-    id: "wise",
-    name: "Ισιδώρα η πνευματική",
-    description: "Αρχαία σοφία και βαθιές προβλέψεις",
-    icon: Sparkles,
-    localSrc: "/images/tellers/mystic-woman.png",
-    storagePath: "tellers/mystic%20woman.png",
-  },
-];
+const genders = ["Γυναίκα", "Άνδρας", "Άλλο"];
+const ageRanges = ["17-24", "25-34", "35-44", "45-54", "55-64", "64+"];
 
 const categories = [
   "Αγάπη & Σχέσεις",
@@ -92,29 +61,48 @@ const moods = [
   "Φοβισμένη/ος",
 ];
 
-const genders = ["Γυναίκα", "Άνδρας", "Άλλο"];
-const ageRanges = ["17-24", "25-34", "35-44", "45-54", "55-64", "64+"];
-
-/** -------- Helpers -------- */
-
-function buildStoragePublicUrl(path: string) {
-  // Δημόσιο URL για Supabase storage (Public bucket "tellers")
-  // Το base URL είναι το PROJECT_URL από το supabase client
-  const baseUrl = supabase.storage.from("tellers").getPublicUrl(path).data.publicUrl;
-  return baseUrl;
-}
-
-/** -------- Component -------- */
-
 const Cup = () => {
   const { toast } = useToast();
-
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [readingResult, setReadingResult] = useState<string | null>(null);
   const [selectedReader, setSelectedReader] = useState<{ id: string; name: string; description: string } | null>(null);
 
-  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  // αν κάποιο img αποτύχει, γυρνάμε σε fallback
+  const [brokenImg, setBrokenImg] = useState<Record<string, boolean>>({});
+
+  // === ΒΑΛΕ τις εικόνες σου στον φάκελο /public/tellers/ και κράτα αυτά τα paths ===
+  const readers: Reader[] = useMemo(
+    () => [
+      {
+        id: "young",
+        name: "Ρένα η μοντέρνα",
+        description: "Φρέσκες προβλέψεις με νεανική αισιοδοξία",
+        icon: Heart,
+        image: "/tellers/modern-woman.png",
+        // fallback προαιρετικό: βάλε εδώ (αν θέλεις) δημόσιο supabase URL
+        // fallback: "https://<project-ref>.supabase.co/storage/v1/object/public/tellers/modern-woman.png",
+      },
+      {
+        id: "experienced",
+        name: "Μαίρη η ψαγμένη",
+        description: "Ισορροπημένη οπτική με εμπειρία ζωής",
+        icon: Crown,
+        image: "/tellers/katina-klassiki.png",
+        // fallback: "https://<project-ref>.supabase.co/storage/v1/object/public/tellers/katina-klassiki.png",
+      },
+      {
+        id: "wise",
+        name: "Ισιδώρα η πνευματική",
+        description: "Αρχαία σοφία και βαθιές προβλέψεις",
+        icon: Sparkles,
+        image: "/tellers/mystic-woman.png",
+        // fallback: "https://<project-ref>.supabase.co/storage/v1/object/public/tellers/mystic-woman.png",
+      },
+    ],
+    []
+  );
 
   const form = useForm<CupReadingForm>({
     defaultValues: {
@@ -124,29 +112,57 @@ const Cup = () => {
       gender: "",
       age_range: "",
       question: "",
+      image: null,
     },
   });
 
-  /** --- Derived for image border highlight --- */
-  const currentReader = useMemo(
-    () => readers.find((r) => r.id === form.getValues("reader")),
-    [form.watch("reader")]
-  );
-
-  /** --- Upload image change --- */
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setSelectedImageFile(file);
-
+    setSelectedImage(file);
     const r = new FileReader();
-    r.onload = (ev) => setImagePreview((ev.target?.result as string) || null);
+    r.onload = (ev) => setImagePreview(ev.target?.result as string);
     r.readAsDataURL(file);
   };
 
-  /** --- Call Edge Function --- */
+  const getCupReading = async (formData: CupReadingForm, imageFile: File): Promise<string | null> => {
+    // μετατρέπουμε το image σε base64 (χωρίς data: prefix)
+    const imageBase64 = await new Promise<string>((resolve) => {
+      const r = new FileReader();
+      r.onload = (e) => resolve((e.target?.result as string).split(",")[1]);
+      r.readAsDataURL(imageFile);
+    });
+
+    const readerName = readers.find((r) => r.id === formData.reader)?.name || "Καφετζού";
+
+    const { data, error } = await supabase.functions.invoke("cup-reading", {
+      body: {
+        reader: readerName,
+        category: formData.category,
+        mood: formData.mood,
+        question: formData.question,
+        imageBase64,
+        // περνάμε και gender/age_range στο prompt, εφόσον ο κώδικας του Edge Function τα αξιοποιεί
+        gender: formData.gender,
+        age_range: formData.age_range,
+      },
+    });
+
+    if (error) throw new Error("Σφάλμα επικοινωνίας με το σύστημα ανάγνωσης.");
+    if (data?.error) throw new Error(data.error);
+
+    if (data?.reading) {
+      toast({
+        title: "Ο χρησμός σας είναι έτοιμος!",
+        description: "Δείτε την ανάγνωση του φλιτζανιού σας.",
+      });
+      return data.reading;
+    }
+    return null;
+  };
+
   const onSubmit = async (data: CupReadingForm) => {
-    if (!selectedImageFile) {
+    if (!selectedImage) {
       toast({
         title: "Παρακαλώ ανεβάστε μια εικόνα",
         description: "Χρειαζόμαστε την εικόνα του φλιτζανιού σας.",
@@ -155,55 +171,18 @@ const Cup = () => {
       return;
     }
 
-    const selReader = readers.find((r) => r.id === data.reader);
-    if (!selReader) {
-      toast({ title: "Επιλέξτε καφετζού", variant: "destructive" });
-      return;
-    }
-
     setIsLoading(true);
-    setSelectedReader({ id: selReader.id, name: selReader.name, description: selReader.description });
+    const rInfo = readers.find((r) => r.id === data.reader);
+    setSelectedReader(rInfo || null);
 
     try {
-      // Μετατρέπουμε σε base64 μόνο το payload (όχι το full dataURL)
-      const base64 = await new Promise<string>((resolve) => {
-        const r = new FileReader();
-        r.onload = (ev) => {
-          const full = ev.target?.result as string;
-          const only = full.includes(",") ? full.split(",")[1] : full;
-          resolve(only);
-        };
-        r.readAsDataURL(selectedImageFile);
-      });
-
-      const payload = {
-        reader: selReader.name,
-        category: data.category,
-        mood: data.mood,
-        question: data.question,
-        gender: data.gender,
-        age_range: data.age_range,
-        imageBase64: base64,
-      };
-
-      const { data: resp, error } = await supabase.functions.invoke(EDGE_FN, { body: payload });
-      if (error) throw error;
-
-      if (resp?.error) {
-        throw new Error(resp.error);
-      }
-
-      if (resp?.reading) {
-        setReadingResult(resp.reading);
-        toast({ title: "Ο χρησμός σας είναι έτοιμος!", description: "Δείτε την ανάγνωση του φλιτζανιού σας." });
-      } else {
-        throw new Error("Άγνωστη απόκριση από το μοντέλο.");
-      }
-    } catch (err: any) {
-      console.error(err);
+      const result = await getCupReading(data, selectedImage);
+      if (result) setReadingResult(result);
+    } catch (e) {
+      console.error(e);
       toast({
         title: "Σφάλμα",
-        description: err?.message || "Κάτι πήγε στραβά. Δοκιμάστε ξανά.",
+        description: "Κάτι πήγε στραβά. Δοκιμάστε ξανά.",
         variant: "destructive",
       });
     } finally {
@@ -211,21 +190,20 @@ const Cup = () => {
     }
   };
 
-  /** --- Back from result --- */
   const handleBackToForm = () => {
     setReadingResult(null);
     setSelectedReader(null);
     form.reset();
-    setSelectedImageFile(null);
+    setSelectedImage(null);
     setImagePreview(null);
+    setBrokenImg({});
   };
 
-  /** --- Placeholder save (ενεργοποίηση με login) --- */
-  const handleSaveReading = async () => {
+  const handleSaveReading = async (_reading: string) => {
+    // θα το ενεργοποιήσεις όταν μπει login
     throw new Error("Η αποθήκευση θα ενεργοποιηθεί όταν προστεθεί login.");
   };
 
-  /** --- Loader & Result states --- */
   if (isLoading && selectedReader) {
     return <CupReadingLoader readerName={selectedReader.name} />;
   }
@@ -263,7 +241,6 @@ const Cup = () => {
         </div>
       </header>
 
-      {/* Body */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-8">
@@ -277,7 +254,7 @@ const Cup = () => {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              {/* Readers */}
+              {/* Επιλογή Καφετζούς */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-mystical-purple">Επιλογή Καφετζούς</CardTitle>
@@ -296,54 +273,45 @@ const Cup = () => {
                             value={field.value}
                             className="grid md:grid-cols-3 gap-5"
                           >
-                            {readers.map((reader) => {
-                              const Icon = reader.icon;
-                              const checked = field.value === reader.id;
-                              return (
-                                <div key={reader.id} className="relative">
-                                  <RadioGroupItem id={reader.id} value={reader.id} className="peer sr-only" />
+                            {readers.map((r) => {
+                              const Icon = r.icon;
+                              const isSelected = field.value === r.id;
+                              const src = brokenImg[r.id] && r.fallback ? r.fallback : r.image;
 
+                              return (
+                                <div key={r.id} className="relative">
+                                  <RadioGroupItem id={r.id} value={r.id} className="peer sr-only" />
                                   <Label
-                                    htmlFor={reader.id}
+                                    htmlFor={r.id}
                                     className={[
-                                      "flex flex-col p-0 overflow-hidden rounded-2xl cursor-pointer transition-all",
-                                      "border-2",
-                                      checked
-                                        ? "border-mystical-purple ring-4 ring-mystical-purple/20 shadow-[0_12px_30px_rgba(139,92,246,0.22)]"
-                                        : "border-mystical-purple/20 hover:border-mystical-purple/40",
+                                      "block overflow-hidden rounded-2xl cursor-pointer transition-all",
+                                      "bg-white border-2 border-mystical-purple/20 hover:border-mystical-purple/40",
+                                      "peer-checked:border-mystical-purple peer-checked:shadow-[0_0_0_4px_rgba(139,92,246,0.12)]",
                                     ].join(" ")}
                                   >
-                                    {/* Image full-bleed with fallback */}
-                                    <div className="w-full aspect-square overflow-hidden relative">
+                                    <div className="relative w-full aspect-square overflow-hidden">
                                       <img
-                                        src={reader.localSrc}
-                                        alt={reader.name}
-                                        className="h-full w-full object-cover"
+                                        src={src}
+                                        alt={r.name}
+                                        className="h-full w-full object-cover select-none"
                                         loading="lazy"
-                                        onError={(e) => {
-                                          const target = e.currentTarget;
-                                          // Fallback σε public URL supabase storage
-                                          target.src = buildStoragePublicUrl(reader.storagePath);
-                                        }}
+                                        onError={() => setBrokenImg((p) => ({ ...p, [r.id]: true }))}
                                       />
-                                      {/* Icon top-right */}
+                                      {/* μικρό icon πάνω δεξιά */}
                                       <div className="absolute right-2 top-2">
                                         <Icon className="h-5 w-5 text-white drop-shadow" />
                                       </div>
-
-                                      {/* Επιλέχθηκε badge */}
-                                      {checked && (
-                                        <div className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-mystical-purple/90 px-2.5 py-1 text-xs font-medium text-white shadow">
-                                          <Check className="h-3.5 w-3.5" />
+                                      {/* badge όταν είναι επιλεγμένο */}
+                                      {isSelected && (
+                                        <div className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-mystical-purple px-2 py-1 text-xs font-medium text-white shadow">
+                                          <Check className="h-4 w-4" />
                                           Επιλέχθηκε
                                         </div>
                                       )}
                                     </div>
-
-                                    {/* Text */}
                                     <div className="px-4 py-3 text-center">
-                                      <h3 className="font-medium text-mystical-purple">{reader.name}</h3>
-                                      <p className="text-sm text-muted-foreground mt-1">{reader.description}</p>
+                                      <h3 className="font-medium text-mystical-purple">{r.name}</h3>
+                                      <p className="text-sm text-muted-foreground mt-1">{r.description}</p>
                                     </div>
                                   </Label>
                                 </div>
@@ -358,7 +326,7 @@ const Cup = () => {
                 </CardContent>
               </Card>
 
-              {/* Profile (gender + age) */}
+              {/* Στοιχεία Προφίλ (Φύλο / Ηλικία) */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-mystical-purple">Στοιχεία Προφίλ</CardTitle>
@@ -368,11 +336,9 @@ const Cup = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="grid md:grid-cols-2 gap-4">
-                    {/* Gender */}
                     <FormField
                       control={form.control}
                       name="gender"
-                      rules={{ required: "Παρακαλώ επιλέξτε φύλο" }}
                       render={({ field }) => (
                         <FormItem>
                           <FormControl>
@@ -382,7 +348,7 @@ const Cup = () => {
                               </SelectTrigger>
                               <SelectContent>
                                 {genders.map((g) => (
-                                  <SelectItem key={g} value={g}>
+                                  <SelectItem value={g} key={g}>
                                     {g}
                                   </SelectItem>
                                 ))}
@@ -393,11 +359,9 @@ const Cup = () => {
                         </FormItem>
                       )}
                     />
-                    {/* Age */}
                     <FormField
                       control={form.control}
                       name="age_range"
-                      rules={{ required: "Παρακαλώ επιλέξτε ηλικιακό εύρος" }}
                       render={({ field }) => (
                         <FormItem>
                           <FormControl>
@@ -407,7 +371,7 @@ const Cup = () => {
                               </SelectTrigger>
                               <SelectContent>
                                 {ageRanges.map((a) => (
-                                  <SelectItem key={a} value={a}>
+                                  <SelectItem value={a} key={a}>
                                     {a}
                                   </SelectItem>
                                 ))}
@@ -422,7 +386,7 @@ const Cup = () => {
                 </CardContent>
               </Card>
 
-              {/* Category */}
+              {/* Τομέας Ενδιαφέροντος */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-mystical-purple">Τομέας Ενδιαφέροντος</CardTitle>
@@ -456,7 +420,7 @@ const Cup = () => {
                 </CardContent>
               </Card>
 
-              {/* Mood */}
+              {/* Συναισθηματική Κατάσταση */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-mystical-purple">Συναισθηματική Κατάσταση</CardTitle>
@@ -490,7 +454,7 @@ const Cup = () => {
                 </CardContent>
               </Card>
 
-              {/* Question */}
+              {/* Προαιρετική Ερώτηση */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-mystical-purple">Ερώτηση (Προαιρετικό)</CardTitle>
@@ -516,29 +480,40 @@ const Cup = () => {
                 </CardContent>
               </Card>
 
-              {/* Upload */}
+              {/* Upload Φωτογραφίας */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-mystical-purple">Φωτογραφία Φλιτζανιού</CardTitle>
-                  <CardDescription>
-                    Ανεβάστε μια καθαρή φωτογραφία του φλιτζανιού σας μετά τον καφέ
-                  </CardDescription>
+                  <CardDescription>Ανεβάστε μια καθαρή φωτογραφία του φλιτζανιού σας μετά τον καφέ</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col items-center space-y-6">
+                    <div className="text-center space-y-2">
+                      <h3 className="font-mystical text-[24px] font-semibold text-[#3B1F4A]">
+                        Ανέβασε το Φλιτζάνι σου ☕
+                      </h3>
+                      <p className="font-elegant text-sm text-[#7E6A8A] max-w-[400px] mx-auto">
+                        Σύρε & άφησε την εικόνα ή κάνε κλικ για επιλογή. Δεκτά αρχεία: JPG/PNG
+                        έως 8MB.
+                      </p>
+                    </div>
+
                     <div className="w-full max-w-md">
                       <Label
                         htmlFor="image-upload"
                         className="flex flex-col items-center justify-center w-full h-80 border-2 border-dashed border-[#8B5CF6] bg-[#FBF7FF] rounded-2xl cursor-pointer hover:border-[#F472B6] hover:bg-[#FDF4FF] transition-all duration-300 shadow-[0_8px_32px_rgba(139,92,246,0.08)] p-8"
                       >
-                        {!imagePreview ? (
-                          <div className="flex flex-col items-center justify-center space-y-4">
-                            <Upload className="w-12 h-12 text-[#8B5CF6]" />
-                            <p className="text-[#3B1F4A] font-medium text-center">
-                              Κάνε κλικ ή σύρε την εικόνα εδώ
-                            </p>
+                        {isLoading ? (
+                          <div className="flex flex-col items-center space-y-4 w-full">
+                            <div className="w-full max-w-xs bg-[#E9D5FF] rounded-full h-2">
+                              <div
+                                className="bg-[#8B5CF6] h-2 rounded-full animate-pulse"
+                                style={{ width: "60%" }}
+                              />
+                            </div>
+                            <p className="text-[#3B1F4A] font-medium">Γίνεται μεταφόρτωση…</p>
                           </div>
-                        ) : (
+                        ) : imagePreview ? (
                           <div className="flex flex-col items-center space-y-4">
                             <img
                               src={imagePreview}
@@ -552,9 +527,16 @@ const Cup = () => {
                               Προχώρα στην Ανάλυση
                             </Button>
                           </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center space-y-4">
+                            <Upload className="w-12 h-12 text-[#8B5CF6]" />
+                            <p className="text-[#3B1F4A] font-medium text-center">
+                              Κάνε κλικ ή σύρε την εικόνα εδώ
+                            </p>
+                          </div>
                         )}
                       </Label>
-                      <Input
+                      <input
                         id="image-upload"
                         type="file"
                         accept="image/*"
@@ -566,7 +548,7 @@ const Cup = () => {
                 </CardContent>
               </Card>
 
-              {/* CTA when δεν υπάρχει preview */}
+              {/* Submit */}
               {!imagePreview && (
                 <div className="text-center">
                   <Button
