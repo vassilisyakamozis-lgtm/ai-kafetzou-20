@@ -1,9 +1,8 @@
 // src/App.tsx
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 
-// ΧΩΡΙΣ lazy() για να μη χρειάζεται dynamic import (καλύπτει το error σου)
-import Home from "./pages/Home";
-import Cup from "./pages/Cup";
+import Home from '@/pages/Home'     // ΣΤΑΤΙΚΟ import
+import Cup from '@/pages/Cup'       // ΣΤΑΤΙΚΟ import
 
 export default function App() {
   return (
@@ -11,9 +10,9 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/cup" element={<Cup />} />
-        {/* Οτιδήποτε άλλο -> σπίτι */}
+        {/* fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
-  );
+  )
 }
