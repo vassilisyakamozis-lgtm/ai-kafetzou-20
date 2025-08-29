@@ -1,19 +1,25 @@
 // src/pages/Cup.tsx
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Form, FormItem, FormMessage, FormField, FormControl } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Card, CardHeader, CardTitle, CardDescription, CardContent
+} from "@/components/ui/card";
+import {
+  Form, FormItem, FormMessage, FormField, FormControl
+} from "@/components/ui/form";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-import { Coffee, ArrowLeft, Sparkles } from "lucide-react";
+import { Coffee, ArrowLeft, Sparkles, UploadCloud } from "lucide-react";
 
 type CupForm = {
   reader: string;
@@ -72,11 +78,8 @@ const ages = ["18-24", "25-34", "35-44", "45-54", "55+"];
 
 export default function Cup() {
   const { toast } = useToast();
-  const navigate = useNavigate();
-
   const [isLoading, setIsLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
 
   const form = useForm<CupForm>({
     defaultValues: {
@@ -90,115 +93,78 @@ export default function Cup() {
     },
   });
 
-  // 1) Απαιτούμε να είναι signed-in
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        toast({
-          title: "Απαιτείται σύνδεση",
-          description: "Συνδέσου για να συνεχίσεις με την ανάγνωση.",
-          variant: "destructive",
-        });
-        // Αν έχεις /login route
-        // navigate("/login");
-        return;
-      }
-      setUserId(data.session.user.id);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // preview εικόνας
+  // Προεπισκόπηση εικόνας
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     form.setValue("image", file);
     if (file) {
       const r = new FileReader();
-      r.onload = (ev) => setImagePreview(ev.target?.result as string);
+      r.onload = (ev) => setImagePreview(String(ev.target?.result || ""));
       r.readAsDataURL(file);
     } else {
       setImagePreview(null);
     }
   };
 
-  // (προαιρετικά) ανέβασμα εικόνας στο storage & get public url
-  async function uploadCupImage(file: File, uid: string) {
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `cups/${uid}/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("cups").upload(path, file, {
-      cacheControl: "3600",
-      upsert: true,
-      contentType: file.type,
-    });
-    if (error) throw error;
-    const { data: pub } = supabase.storage.from("cups").getPublicUrl(path);
-    return pub.publicUrl;
-  }
-
   const onSubmit = async (values: CupForm) => {
+    // Βρες label αναγνώστριας
+    const readerName =
+      readers.find((r) => r.id === values.reader)?.name || "Ρένα η μοντέρνα";
+
+    // (προαιρετικά) url εικόνας αν αργότερα ανεβάζεις στο storage
+    const image_url = null as string | null;
+
     try {
       setIsLoading(true);
 
-      // 2) Πάρε το access token (JWT)
-      const { data: sessData } = await supabase.auth.getSession();
-      const token = sessData.session?.access_token;
-      if (!token) {
+      // === ΑΠΑΙΤΕΙΤΑΙ LOGIN ===
+      const {
+        data: { session },
+        error: sessionErr,
+      } = await supabase.auth.getSession();
+
+      if (sessionErr) throw sessionErr;
+      if (!session) {
         toast({
           title: "Απαιτείται σύνδεση",
-          description: "Παρακαλώ συνδέσου ξανά.",
+          description:
+            "Για να ξεκινήσει η ανάγνωση πρέπει να είσαι συνδεδεμένος/η.",
           variant: "destructive",
         });
         return;
       }
 
-      // resolve name από id
-      const readerName =
-        readers.find((r) => r.id === values.reader)?.name || "Ρένα η μοντέρνα";
-
-      // (προαιρετικό) ανέβασε την εικόνα για να πάρεις URL
-      let image_url: string | null = null;
-      if (values.image && userId) {
-        try {
-          image_url = await uploadCupImage(values.image, userId);
-        } catch (e: any) {
-          console.warn("Δεν ανέβηκε η εικόνα:", e?.message || e);
-        }
-      }
-
-      // 3) Κάλεσε το Edge Function με Authorization header
       const { data, error } = await supabase.functions.invoke("reading", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: {
           reader: readerName,
           category: values.category,
           mood: values.mood,
           question: values.question,
-          image_url, // μπορεί να είναι null
+          image_url,
           gender: values.gender,
           age_range: values.age_range,
         },
+        // ΣΤΕΛΝΩ ΡΗΤΑ ΤΟ JWT (πολύ σημαντικό σε preview περιβάλλοντα)
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
-      if (error) {
-        throw error;
-      }
-      if (!data?.ok) {
+      if (error) throw error;
+
+      if (data?.ok) {
+        toast({
+          title: "Ο χρησμός ετοιμάστηκε!",
+          description: `Ημερομηνία: ${new Date(
+            data.created_at
+          ).toLocaleString("el-GR")}`,
+        });
+        // Κάνε redirect σε σελίδα αποτελέσματος ή άνοιξε modal
+        console.log("Reading:", data.text);
+        console.log("TTS url:", data.tts_url);
+      } else {
         throw new Error(data?.error ?? "Άγνωστο σφάλμα");
       }
-
-      toast({
-        title: "Ο χρησμός ετοιμάστηκε!",
-        description: `Ημερομηνία: ${new Date(
-          data.created_at
-        ).toLocaleString("el-GR")}`,
-      });
-
-      // εδώ μπορείς να πας σε σελίδα αποτελέσματος ή modal
-      console.log("Reading:", data.text);
-      console.log("TTS url:", data.tts_url);
     } catch (e: any) {
       toast({
         title: "Σφάλμα",
@@ -212,6 +178,7 @@ export default function Cup() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Header */}
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-primary">
@@ -227,12 +194,11 @@ export default function Cup() {
       </header>
 
       <div className="container mx-auto px-4 py-8 max-w-5xl">
+        {/* Readers */}
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Επιλογή Καφετζούς</CardTitle>
-            <CardDescription>
-              Διάλεξε ποια θα διαβάσει το φλιτζάνι σου
-            </CardDescription>
+            <CardDescription>Διάλεξε ποια θα διαβάσει το φλιτζάνι σου</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -283,12 +249,12 @@ export default function Cup() {
                   )}
                 />
 
+                {/* Profile (gender / age) */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Στοιχεία Προφίλ</CardTitle>
                     <CardDescription>
-                      Μας βοηθούν να προσαρμόσουμε καλύτερα τον τόνο & το
-                      περιεχόμενο.
+                      Μας βοηθούν να προσαρμόσουμε καλύτερα τον τόνο & το περιεχόμενο.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -352,6 +318,7 @@ export default function Cup() {
                   </CardContent>
                 </Card>
 
+                {/* Interest / Mood */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -409,6 +376,7 @@ export default function Cup() {
                   />
                 </div>
 
+                {/* Question */}
                 <FormField
                   control={form.control}
                   name="question"
@@ -426,30 +394,43 @@ export default function Cup() {
                   )}
                 />
 
+                {/* Upload area (προαιρετικά) */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Φωτογραφία Φλιτζανιού (προαιρετικό)</CardTitle>
                     <CardDescription>
-                      Αν έχεις καθαρή φωτογραφία από το φλιτζάνι σου, ανέβασέ
-                      την.
+                      Αν έχεις καθαρή φωτογραφία από το φλιτζάνι σου, ανέβασέ την.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <label className="flex flex-col items-center justify-center w-full h-56 border-2 border-dashed rounded-xl cursor-pointer">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        className="sr-only"
-                      />
-                      {imagePreview ? (
-                        <img src={imagePreview} className="h-44 object-contain" />
-                      ) : (
-                        <div className="text-sm text-muted-foreground">
-                          Κάνε κλικ για να επιλέξεις εικόνα
-                        </div>
-                      )}
-                    </label>
+                    <div className="w-full">
+                      <label
+                        htmlFor="cup-image"
+                        className="flex flex-col items-center justify-center w-full h-56 border-2 border-dashed rounded-xl cursor-pointer hover:bg-muted/30 transition-colors"
+                      >
+                        <Input
+                          id="cup-image"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="sr-only"
+                        />
+                        {imagePreview ? (
+                          <img
+                            src={imagePreview}
+                            className="h-44 object-contain animate-in fade-in duration-300"
+                            alt="Προεπισκόπηση φλιτζανιού"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                            <UploadCloud className="h-7 w-7" />
+                            <div className="text-sm">
+                              Κάνε κλικ για να επιλέξεις εικόνα
+                            </div>
+                          </div>
+                        )}
+                      </label>
+                    </div>
                   </CardContent>
                 </Card>
 
