@@ -1,37 +1,19 @@
 // src/pages/Cup.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormItem,
-  FormMessage,
-  FormField,
-  FormControl,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Form, FormItem, FormMessage, FormField, FormControl } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-import { Coffee, ArrowLeft, Sparkles, ImageIcon } from "lucide-react";
+import { Coffee, Sparkles, ImageIcon, Home as HomeIcon } from "lucide-react";
 
 type CupForm = {
   reader: string;
@@ -89,27 +71,17 @@ const genders = ["Γυναίκα", "Άνδρας", "Άλλο/Μη δυαδικό
 const ages = ["18-24", "25-34", "35-44", "45-54", "55+"];
 
 export default function Cup() {
-  const { toast } = useToast();
   const navigate = useNavigate();
-
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
 
-  // Πάρε JWT μόλις φορτώσει η σελίδα + σε αλλαγές session
+  // Φέρνουμε το access token μόλις μπει η σελίδα
   useEffect(() => {
-    let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
       setSessionToken(data.session?.access_token ?? null);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setSessionToken(session?.access_token ?? null);
-    });
-    return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
-    };
   }, []);
 
   const form = useForm<CupForm>({
@@ -124,13 +96,7 @@ export default function Cup() {
     },
   });
 
-  // preview εικόνας με revoke για μνήμη
-  useEffect(() => {
-    return () => {
-      if (imagePreview?.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
-    };
-  }, [imagePreview]);
-
+  // preview εικόνας
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     form.setValue("image", file);
@@ -142,7 +108,7 @@ export default function Cup() {
     }
   };
 
-  // upload εικόνας στο bucket 'uploads' -> public URL
+  // προαιρετικό upload εικόνας στο bucket 'uploads' και επιστροφή public URL
   const uploadCupImage = async (file: File) => {
     const { data: user } = await supabase.auth.getUser();
     const uid = user.user?.id ?? "anonymous";
@@ -155,13 +121,6 @@ export default function Cup() {
     const { data } = supabase.storage.from("uploads").getPublicUrl(path);
     return data.publicUrl as string;
   };
-
-  const selectedReaderName = useMemo(
-    () =>
-      readers.find((r) => r.id === form.getValues("reader"))?.name ||
-      "Ρένα η μοντέρνα",
-    [form]
-  );
 
   const onSubmit = async (values: CupForm) => {
     if (!sessionToken) {
@@ -182,6 +141,7 @@ export default function Cup() {
         image_url = await uploadCupImage(values.image);
       }
     } catch (e: any) {
+      // Δεν μπλοκάρουμε την ανάγνωση αν αποτύχει το upload
       console.warn("Upload image failed:", e?.message ?? e);
     }
 
@@ -198,6 +158,7 @@ export default function Cup() {
           gender: values.gender,
           age_range: values.age_range,
         },
+        // Στέλνουμε JWT (απαιτείται από το function)
         headers: {
           Authorization: `Bearer ${sessionToken}`,
         },
@@ -212,8 +173,6 @@ export default function Cup() {
             data.created_at
           ).toLocaleString("el-GR")}`,
         });
-        // εδώ μπορείς να κάνεις navigate σε σελίδα αποτελέσματος αν θες
-        // navigate("/result", { state: data });
         console.log("Reading:", data.text);
         console.log("TTS url:", data.tts_url);
       } else {
@@ -230,19 +189,39 @@ export default function Cup() {
     }
   };
 
+  // χειριστής για “Home”
+  const goHome = () => {
+    // SPA πλοήγηση
+    navigate("/", { replace: false });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 text-primary"
-            type="button"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span>Home</span>
-          </button>
+          {/* Κουμπί Home (SPA) + ασφαλές fallback */}
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              className="flex items-center gap-2 text-primary"
+              onClick={goHome}
+            >
+              <HomeIcon className="h-5 w-5" />
+              <span>Home</span>
+            </Button>
+
+            {/* Fallback link (σε περίπτωση που δεν “παίζει” το route setup) */}
+            <a
+              href="/"
+              className="text-xs text-muted-foreground hover:underline"
+              aria-label="Fallback link to home"
+            >
+              / (fallback)
+            </a>
+          </div>
+
           <h1 className="text-2xl font-bold text-primary">
             <Coffee className="inline-block mr-2 h-6 w-6" />
             Ανάγνωση Φλιτζανιού
@@ -251,19 +230,16 @@ export default function Cup() {
         </div>
       </header>
 
-      {/* Body */}
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Επιλογή Καφετζούς</CardTitle>
-            <CardDescription>
-              Διάλεξε ποια θα διαβάσει το φλιτζάνι σου
-            </CardDescription>
+            <CardDescription>Διάλεξε ποια θα διαβάσει το φλιτζάνι σου</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                {/* Reader selection */}
+                {/* Readers */}
                 <FormField
                   control={form.control}
                   name="reader"
@@ -295,9 +271,7 @@ export default function Cup() {
                                 loading="lazy"
                               />
                               <div className="px-4 py-3 text-center">
-                                <div className="font-medium text-primary">
-                                  {r.name}
-                                </div>
+                                <div className="font-medium text-primary">{r.name}</div>
                                 <div className="text-sm text-muted-foreground mt-1">
                                   {r.description}
                                 </div>
@@ -316,8 +290,7 @@ export default function Cup() {
                   <CardHeader>
                     <CardTitle>Στοιχεία Προφίλ</CardTitle>
                     <CardDescription>
-                      Μας βοηθούν να προσαρμόσουμε καλύτερα τον τόνο & το
-                      περιεχόμενο.
+                      Μας βοηθούν να προσαρμόσουμε καλύτερα τον τόνο & το περιεχόμενο.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -329,10 +302,7 @@ export default function Cup() {
                         render={({ field }) => (
                           <FormItem>
                             <FormControl>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
+                              <Select onValueChange={field.onChange} value={field.value}>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Φύλο..." />
                                 </SelectTrigger>
@@ -357,10 +327,7 @@ export default function Cup() {
                         render={({ field }) => (
                           <FormItem>
                             <FormControl>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
+                              <Select onValueChange={field.onChange} value={field.value}>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Ηλικιακό εύρος..." />
                                 </SelectTrigger>
@@ -390,10 +357,7 @@ export default function Cup() {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <SelectTrigger>
                               <SelectValue placeholder="Τομέας ενδιαφέροντος..." />
                             </SelectTrigger>
@@ -410,6 +374,7 @@ export default function Cup() {
                       </FormItem>
                     )}
                   />
+
                   <FormField
                     control={form.control}
                     name="mood"
@@ -417,10 +382,7 @@ export default function Cup() {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <SelectTrigger>
                               <SelectValue placeholder="Στυλ/διάθεση..." />
                             </SelectTrigger>
@@ -467,12 +429,7 @@ export default function Cup() {
                   </CardHeader>
                   <CardContent>
                     <label className="flex flex-col items-center justify-center w-full h-56 border-2 border-dashed rounded-xl cursor-pointer transition hover:border-primary/50">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        className="sr-only"
-                      />
+                      <Input type="file" accept="image/*" onChange={handleImageChange} className="sr-only" />
                       {imagePreview ? (
                         <img
                           src={imagePreview}
