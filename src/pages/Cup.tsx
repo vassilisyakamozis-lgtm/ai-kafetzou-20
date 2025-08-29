@@ -1,75 +1,55 @@
 // src/pages/Cup.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormItem,
-  FormMessage,
-  FormField,
-  FormControl,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Form, FormItem, FormMessage, FormField, FormControl } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 import { Coffee, ArrowLeft, Sparkles } from "lucide-react";
 
-// ---- Types ----
 type CupForm = {
   reader: string;
   category: string;
   mood: string;
   question?: string;
   image: File | null;
+
+  // ΝΕΑ:
   gender: string;
   age_range: string;
 };
 
-// ---- Readers ----
 const readers = [
   {
     id: "young",
     name: "Ρένα η μοντέρνα",
     description: "Φρέσκες προβλέψεις με νεανική αισιοδοξία",
-    image:
-      "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/modern%20woman.png?v=2",
+    image: "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/modern%20woman.png?v=2",
   },
   {
     id: "experienced",
     name: "Μαίρη η ψαγμένη",
     description: "Ισορροπημένη οπτική με εμπειρία ζωής",
-    image:
-      "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/katina-klassiki.png?v=2",
+    image: "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/katina-klassiki.png?v=2",
   },
   {
     id: "wise",
     name: "Ισιδώρα η πνευματική",
     description: "Αρχαία σοφία και βαθιές προβλέψεις",
-    image:
-      "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/mystic%20woman.png?v=2",
+    image: "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/mystic%20woman.png?v=2",
   },
 ];
 
-// ---- Options (FULL) ----
 const categories = [
+  "Γενικό Μέλλον",
   "Αγάπη & Σχέσεις",
   "Καριέρα & Εργασία",
   "Υγεία & Ευεξία",
@@ -77,48 +57,43 @@ const categories = [
   "Χρήματα & Οικονομικά",
   "Ταξίδια & Περιπέτειες",
   "Πνευματική Ανάπτυξη",
-  "Γενικό Μέλλον",
 ];
 
 const moods = [
-  "Χαρούμενη/ος",
-  "Ανήσυχη/ος",
-  "Ελπιδοφόρα/ος",
-  "Μπερδεμένη/ος",
-  "Ενθουσιασμένη/ος",
-  "Λυπημένη/ος",
-  "Αισιόδοξη/ος",
-  "Φοβισμένη/ος",
+  "Ζεστή & ενθαρρυντική",
+  "Ισορροπημένη & αντικειμενική",
+  "Πνευματική & βαθιά",
+  "Ανάλαφρη & αισιόδοξη",
 ];
 
 const genders = ["Γυναίκα", "Άνδρας", "Άλλο/Μη δυαδικό"];
 const ages = ["18-24", "25-34", "35-44", "45-54", "55+"];
 
-// ---- Helpers ----
-async function uploadToStorage(file: File): Promise<string | null> {
-  try {
-    // ⚠️ άλλαξε σε άλλο bucket αν θες
-    const bucket = "uploads";
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `cups/${Date.now()}.${ext}`;
-
-    const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-      contentType: file.type || "image/jpeg",
-    });
-    if (upErr) throw upErr;
-
-    const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
-    return pub?.publicUrl ?? null;
-  } catch (e) {
-    console.error("Upload error:", e);
-    return null;
-  }
-}
-
 export default function Cup() {
+  const navigate = useNavigate();
   const { toast } = useToast();
+
+  // --- (2) & (3): Session guard ---
+  const [authChecking, setAuthChecking] = useState(true);
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/login");
+        return;
+      }
+      setAuthChecking(false);
+    };
+    checkSession();
+
+    // Optional: keep in sync with auth state changes
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) navigate("/login");
+    });
+    return () => { sub?.subscription?.unsubscribe(); };
+  }, [navigate]);
+  // ---------------------------------
+
   const [isLoading, setIsLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
@@ -134,7 +109,7 @@ export default function Cup() {
     },
   });
 
-  // preview
+  // απλή προεπισκόπηση
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     form.setValue("image", file);
@@ -148,28 +123,19 @@ export default function Cup() {
   };
 
   const onSubmit = async (values: CupForm) => {
+    const readerName = readers.find((r) => r.id === values.reader)?.name || "Ρένα η μοντέρνα";
+    const image_url = null as string | null;
+
     try {
       setIsLoading(true);
 
-      // Βρες εμφανιστικό όνομα αναγνώστριας
-      const readerName =
-        readers.find((r) => r.id === values.reader)?.name || "Ρένα η μοντέρνα";
-
-      // Ανέβασε τη φωτογραφία (αν υπάρχει) και πάρε public URL
-      let image_url: string | null = null;
-      if (values.image) {
-        image_url = await uploadToStorage(values.image);
-      }
-
-      // Κλήση στην Edge Function "reading"
       const { data, error } = await supabase.functions.invoke("reading", {
         body: {
           reader: readerName,
           category: values.category,
           mood: values.mood,
-          question: values.question || null,
-          image_url, // public URL από το storage ή null
-          // ΝΕΑ – τα περνάμε για να επηρεάζουν το prompt
+          question: values.question,
+          image_url,
           gender: values.gender,
           age_range: values.age_range,
         },
@@ -177,34 +143,31 @@ export default function Cup() {
 
       if (error) throw error;
 
-      if (!data?.ok) {
-        throw new Error(data?.error ?? "Άγνωστο σφάλμα από την Edge Function.");
+      if (data?.ok) {
+        toast({
+          title: "Ο χρησμός ετοιμάστηκε!",
+          description: `Ημερομηνία: ${new Date(data.created_at).toLocaleString("el-GR")}`,
+        });
+        // εδώ θα προωθήσεις/δείξεις το αποτέλεσμα (ή αποθήκευση state)
+        console.log("Reading:", data.text);
+        console.log("TTS url:", data.tts_url);
+      } else {
+        throw new Error(data?.error ?? "Άγνωστο σφάλμα");
       }
-
-      toast({
-        title: "Ο χρησμός ετοιμάστηκε!",
-        description: `Ημερομηνία: ${new Date(
-          data.created_at
-        ).toLocaleString("el-GR")}`,
-      });
-
-      // εδώ μπορείς να κάνεις redirect σε σελίδα αποτελέσματος
-      // ή να ανοίξεις modal κλπ. Για debugging:
-      console.log("Reading:", data.text);
-      console.log("TTS url:", data.tts_url);
     } catch (e: any) {
-      console.error(e);
-      toast({
-        title: "Σφάλμα",
-        description:
-          e?.message ??
-          "Αποτυχία κλήσης. Έλεγξε ότι η Edge Function είναι deployed και ότι το project URL επιτρέπεται στα CORS",
-        variant: "destructive",
-      });
+      toast({ title: "Σφάλμα", description: String(e?.message ?? e), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (authChecking) {
+    return (
+      <div className="min-h-screen grid place-items-center">
+        <div className="text-muted-foreground">Έλεγχος σύνδεσης…</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -224,17 +187,15 @@ export default function Cup() {
       </header>
 
       <div className="container mx-auto px-4 py-8 max-w-5xl">
+        {/* Readers */}
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Επιλογή Καφετζούς</CardTitle>
-            <CardDescription>
-              Διάλεξε ποια θα διαβάσει το φλιτζάνι σου
-            </CardDescription>
+            <CardDescription>Διάλεξε ποια θα διαβάσει το φλιτζάνι σου</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                {/* Reader */}
                 <FormField
                   control={form.control}
                   name="reader"
@@ -259,19 +220,10 @@ export default function Cup() {
                                 onChange={() => field.onChange(r.id)}
                                 className="hidden"
                               />
-                              <img
-                                src={r.image}
-                                alt={r.name}
-                                className="w-full aspect-square object-cover"
-                                loading="lazy"
-                              />
+                              <img src={r.image} alt={r.name} className="w-full aspect-square object-cover" />
                               <div className="px-4 py-3 text-center">
-                                <div className="font-medium text-primary">
-                                  {r.name}
-                                </div>
-                                <div className="text-sm text-muted-foreground mt-1">
-                                  {r.description}
-                                </div>
+                                <div className="font-medium text-primary">{r.name}</div>
+                                <div className="text-sm text-muted-foreground mt-1">{r.description}</div>
                               </div>
                             </label>
                           ))}
@@ -282,14 +234,11 @@ export default function Cup() {
                   )}
                 />
 
-                {/* Profile */}
+                {/* Profile (gender / age) */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Στοιχεία Προφίλ</CardTitle>
-                    <CardDescription>
-                      Μας βοηθούν να προσαρμόσουμε καλύτερα τον τόνο & το
-                      περιεχόμενο.
-                    </CardDescription>
+                    <CardDescription>Μας βοηθούν να προσαρμόσουμε καλύτερα τον τόνο & το περιεχόμενο.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="grid md:grid-cols-2 gap-4">
@@ -300,18 +249,11 @@ export default function Cup() {
                         render={({ field }) => (
                           <FormItem>
                             <FormControl>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Φύλο..." />
-                                </SelectTrigger>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <SelectTrigger><SelectValue placeholder="Φύλο..." /></SelectTrigger>
                                 <SelectContent>
                                   {genders.map((g) => (
-                                    <SelectItem key={g} value={g}>
-                                      {g}
-                                    </SelectItem>
+                                    <SelectItem key={g} value={g}>{g}</SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
@@ -328,18 +270,11 @@ export default function Cup() {
                         render={({ field }) => (
                           <FormItem>
                             <FormControl>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Ηλικιακό εύρος..." />
-                                </SelectTrigger>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <SelectTrigger><SelectValue placeholder="Ηλικιακό εύρος..." /></SelectTrigger>
                                 <SelectContent>
                                   {ages.map((a) => (
-                                    <SelectItem key={a} value={a}>
-                                      {a}
-                                    </SelectItem>
+                                    <SelectItem key={a} value={a}>{a}</SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
@@ -361,19 +296,10 @@ export default function Cup() {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Τομέας ενδιαφέροντος..." />
-                            </SelectTrigger>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger><SelectValue placeholder="Τομέας ενδιαφέροντος..." /></SelectTrigger>
                             <SelectContent>
-                              {categories.map((c) => (
-                                <SelectItem key={c} value={c}>
-                                  {c}
-                                </SelectItem>
-                              ))}
+                              {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -381,7 +307,6 @@ export default function Cup() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="mood"
@@ -389,19 +314,10 @@ export default function Cup() {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Στυλ/διάθεση..." />
-                            </SelectTrigger>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger><SelectValue placeholder="Στυλ/διάθεση..." /></SelectTrigger>
                             <SelectContent>
-                              {moods.map((m) => (
-                                <SelectItem key={m} value={m}>
-                                  {m}
-                                </SelectItem>
-                              ))}
+                              {moods.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -418,45 +334,26 @@ export default function Cup() {
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Textarea
-                          placeholder="Προαιρετική ερώτηση (π.χ. Θα βρω αγάπη φέτος;)"
-                          className="min-h-[100px] resize-none"
-                          {...field}
-                        />
+                        <Textarea placeholder="Προαιρετική ερώτηση (π.χ. Θα βρω αγάπη φέτος;)"
+                                  className="min-h-[100px] resize-none" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {/* Upload (optional) */}
+                {/* Upload area (προαιρετικά) */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Φωτογραφία Φλιτζανιού (προαιρετικό)</CardTitle>
-                    <CardDescription>
-                      Αν έχεις καθαρή φωτογραφία από το φλιτζάνι σου, ανέβασέ
-                      την.
-                    </CardDescription>
+                    <CardDescription>Αν έχεις καθαρή φωτογραφία από το φλιτζάνι σου, ανέβασέ την.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <label className="flex flex-col items-center justify-center w-full h-56 border-2 border-dashed rounded-xl cursor-pointer">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        className="sr-only"
-                      />
-                      {imagePreview ? (
-                        <img
-                          src={imagePreview}
-                          className="h-44 object-contain"
-                          alt="preview"
-                        />
-                      ) : (
-                        <div className="text-sm text-muted-foreground">
-                          Κάνε κλικ για να επιλέξεις εικόνα
-                        </div>
-                      )}
+                      <Input type="file" accept="image/*" onChange={handleImageChange} className="sr-only" />
+                      {imagePreview
+                        ? <img src={imagePreview} className="h-44 object-contain" />
+                        : <div className="text-sm text-muted-foreground">Κάνε κλικ για να επιλέξεις εικόνα</div>}
                     </label>
                   </CardContent>
                 </Card>
