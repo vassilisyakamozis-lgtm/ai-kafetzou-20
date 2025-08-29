@@ -21,7 +21,6 @@ type CupForm = {
   mood: string;
   question?: string;
   image: File | null;
-
   gender: string;
   age_range: string;
 };
@@ -77,7 +76,6 @@ export default function Cup() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
   const form = useForm<CupForm>({
@@ -92,29 +90,26 @@ export default function Cup() {
     },
   });
 
-  // ---- (1) Έλεγχος σύνδεσης / απόκτηση JWT
+  // 1) Απαιτούμε να είναι signed-in
   useEffect(() => {
-    const init = async () => {
+    (async () => {
       const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token ?? null;
-      const uid = data.session?.user?.id ?? null;
-
-      if (!token || !uid) {
+      if (!data.session) {
         toast({
           title: "Απαιτείται σύνδεση",
-          description: "Συνδέσου για να συνεχίσεις στην ανάγνωση.",
+          description: "Συνδέσου για να συνεχίσεις με την ανάγνωση.",
           variant: "destructive",
         });
-        navigate("/login"); // άλλαξε το path αν έχεις άλλο route
+        // Αν έχεις /login route
+        // navigate("/login");
         return;
       }
-      setAccessToken(token);
-      setUserId(uid);
-    };
-    init();
-  }, [navigate, toast]);
+      setUserId(data.session.user.id);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // απλή προεπισκόπηση
+  // preview εικόνας
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     form.setValue("image", file);
@@ -127,79 +122,89 @@ export default function Cup() {
     }
   };
 
-  // ---- (2) Αν υπάρχει εικόνα, ανέβασέ την σε public bucket και πάρε URL
-  async function uploadImageAndGetUrl(file: File, uid: string) {
+  // (προαιρετικά) ανέβασμα εικόνας στο storage & get public url
+  async function uploadCupImage(file: File, uid: string) {
     const ext = file.name.split(".").pop() || "jpg";
-    const path = `${uid}/${Date.now()}.${ext}`;
-
-    const { error: upErr } = await supabase
-      .storage
-      .from("cup-uploads") // <- βεβαιώσου ότι το bucket υπάρχει και είναι public
-      .upload(path, file, { upsert: true, contentType: file.type });
-
-    if (upErr) throw upErr;
-
-    const { data: pub } = supabase.storage.from("cup-uploads").getPublicUrl(path);
-    return pub?.publicUrl ?? null;
+    const path = `cups/${uid}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("cups").upload(path, file, {
+      cacheControl: "3600",
+      upsert: true,
+      contentType: file.type,
+    });
+    if (error) throw error;
+    const { data: pub } = supabase.storage.from("cups").getPublicUrl(path);
+    return pub.publicUrl;
   }
 
   const onSubmit = async (values: CupForm) => {
-    if (!accessToken || !userId) {
-      toast({ title: "Σφάλμα", description: "Δεν υπάρχει ενεργό session.", variant: "destructive" });
-      return;
-    }
-
-    const readerName = readers.find((r) => r.id === values.reader)?.name || "Ρένα η μοντέρνα";
-
-    // Προαιρετικό: ανέβασε την εικόνα για να φτιάξεις image_url
-    let image_url: string | null = null;
-    if (values.image) {
-      try {
-        image_url = await uploadImageAndGetUrl(values.image, userId);
-      } catch (e: any) {
-        toast({
-          title: "Αποτυχία ανεβάσματος εικόνας",
-          description: String(e?.message ?? e),
-          variant: "destructive",
-        });
-      }
-    }
-
     try {
       setIsLoading(true);
 
-      // ---- (3) Κλήση Edge Function με Authorization: Bearer <accessToken>
+      // 2) Πάρε το access token (JWT)
+      const { data: sessData } = await supabase.auth.getSession();
+      const token = sessData.session?.access_token;
+      if (!token) {
+        toast({
+          title: "Απαιτείται σύνδεση",
+          description: "Παρακαλώ συνδέσου ξανά.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // resolve name από id
+      const readerName =
+        readers.find((r) => r.id === values.reader)?.name || "Ρένα η μοντέρνα";
+
+      // (προαιρετικό) ανέβασε την εικόνα για να πάρεις URL
+      let image_url: string | null = null;
+      if (values.image && userId) {
+        try {
+          image_url = await uploadCupImage(values.image, userId);
+        } catch (e: any) {
+          console.warn("Δεν ανέβηκε η εικόνα:", e?.message || e);
+        }
+      }
+
+      // 3) Κάλεσε το Edge Function με Authorization header
       const { data, error } = await supabase.functions.invoke("reading", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: {
           reader: readerName,
           category: values.category,
           mood: values.mood,
           question: values.question,
-          image_url,
+          image_url, // μπορεί να είναι null
           gender: values.gender,
           age_range: values.age_range,
         },
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
       });
 
-      if (error) throw error;
-
-      if (data?.ok) {
-        toast({
-          title: "Ο χρησμός ετοιμάστηκε!",
-          description: `Ημερομηνία: ${new Date(data.created_at).toLocaleString("el-GR")}`,
-        });
-
-        // TODO: Εδώ δείξε αποτέλεσμα (π.χ. άνοιξε CupReadingResult modal/page)
-        console.log("Reading:", data.text);
-        console.log("TTS url:", data.tts_url);
-      } else {
+      if (error) {
+        throw error;
+      }
+      if (!data?.ok) {
         throw new Error(data?.error ?? "Άγνωστο σφάλμα");
       }
+
+      toast({
+        title: "Ο χρησμός ετοιμάστηκε!",
+        description: `Ημερομηνία: ${new Date(
+          data.created_at
+        ).toLocaleString("el-GR")}`,
+      });
+
+      // εδώ μπορείς να πας σε σελίδα αποτελέσματος ή modal
+      console.log("Reading:", data.text);
+      console.log("TTS url:", data.tts_url);
     } catch (e: any) {
-      toast({ title: "Σφάλμα", description: String(e?.message ?? e), variant: "destructive" });
+      toast({
+        title: "Σφάλμα",
+        description: String(e?.message ?? e),
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -207,7 +212,6 @@ export default function Cup() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-primary">
@@ -226,7 +230,9 @@ export default function Cup() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Επιλογή Καφετζούς</CardTitle>
-            <CardDescription>Διάλεξε ποια θα διαβάσει το φλιτζάνι σου</CardDescription>
+            <CardDescription>
+              Διάλεξε ποια θα διαβάσει το φλιτζάνι σου
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -255,10 +261,18 @@ export default function Cup() {
                                 onChange={() => field.onChange(r.id)}
                                 className="hidden"
                               />
-                              <img src={r.image} alt={r.name} className="w-full aspect-square object-cover" />
+                              <img
+                                src={r.image}
+                                alt={r.name}
+                                className="w-full aspect-square object-cover"
+                              />
                               <div className="px-4 py-3 text-center">
-                                <div className="font-medium text-primary">{r.name}</div>
-                                <div className="text-sm text-muted-foreground mt-1">{r.description}</div>
+                                <div className="font-medium text-primary">
+                                  {r.name}
+                                </div>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  {r.description}
+                                </div>
                               </div>
                             </label>
                           ))}
@@ -269,12 +283,12 @@ export default function Cup() {
                   )}
                 />
 
-                {/* Profile (gender / age) */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Στοιχεία Προφίλ</CardTitle>
                     <CardDescription>
-                      Μας βοηθούν να προσαρμόσουμε καλύτερα τον τόνο & το περιεχόμενο.
+                      Μας βοηθούν να προσαρμόσουμε καλύτερα τον τόνο & το
+                      περιεχόμενο.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -286,7 +300,10 @@ export default function Cup() {
                         render={({ field }) => (
                           <FormItem>
                             <FormControl>
-                              <Select onValueChange={field.onChange} value={field.value}>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Φύλο..." />
                                 </SelectTrigger>
@@ -311,7 +328,10 @@ export default function Cup() {
                         render={({ field }) => (
                           <FormItem>
                             <FormControl>
-                              <Select onValueChange={field.onChange} value={field.value}>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Ηλικιακό εύρος..." />
                                 </SelectTrigger>
@@ -332,7 +352,6 @@ export default function Cup() {
                   </CardContent>
                 </Card>
 
-                {/* Interest / Mood */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -341,7 +360,10 @@ export default function Cup() {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
                             <SelectTrigger>
                               <SelectValue placeholder="Τομέας ενδιαφέροντος..." />
                             </SelectTrigger>
@@ -365,7 +387,10 @@ export default function Cup() {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
                             <SelectTrigger>
                               <SelectValue placeholder="Στυλ/διάθεση..." />
                             </SelectTrigger>
@@ -384,7 +409,6 @@ export default function Cup() {
                   />
                 </div>
 
-                {/* Question */}
                 <FormField
                   control={form.control}
                   name="question"
@@ -402,19 +426,28 @@ export default function Cup() {
                   )}
                 />
 
-                {/* Upload area (προαιρετικά) */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Φωτογραφία Φλιτζανιού (προαιρετικό)</CardTitle>
-                    <CardDescription>Αν έχεις καθαρή φωτογραφία από το φλιτζάνι σου, ανέβασέ την.</CardDescription>
+                    <CardDescription>
+                      Αν έχεις καθαρή φωτογραφία από το φλιτζάνι σου, ανέβασέ
+                      την.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <label className="flex flex-col items-center justify-center w-full h-56 border-2 border-dashed rounded-xl cursor-pointer">
-                      <Input type="file" accept="image/*" onChange={handleImageChange} className="sr-only" />
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="sr-only"
+                      />
                       {imagePreview ? (
                         <img src={imagePreview} className="h-44 object-contain" />
                       ) : (
-                        <div className="text-sm text-muted-foreground">Κάνε κλικ για να επιλέξεις εικόνα</div>
+                        <div className="text-sm text-muted-foreground">
+                          Κάνε κλικ για να επιλέξεις εικόνα
+                        </div>
                       )}
                     </label>
                   </CardContent>
