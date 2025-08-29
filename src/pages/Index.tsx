@@ -1,7 +1,7 @@
 // src/pages/Cup.tsx
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom"; // ✅ ΝΕΟ
 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -30,19 +30,22 @@ const readers = [
     id: "young",
     name: "Ρένα η μοντέρνα",
     description: "Φρέσκες προβλέψεις με νεανική αισιοδοξία",
-    image: "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/modern%20woman.png?v=2",
+    image:
+      "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/modern%20woman.png?v=2",
   },
   {
     id: "experienced",
     name: "Μαίρη η ψαγμένη",
     description: "Ισορροπημένη οπτική με εμπειρία ζωής",
-    image: "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/katina-klassiki.png?v=2",
+    image:
+      "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/katina-klassiki.png?v=2",
   },
   {
     id: "wise",
     name: "Ισιδώρα η πνευματική",
     description: "Αρχαία σοφία και βαθιές προβλέψεις",
-    image: "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/mystic%20woman.png?v=2",
+    image:
+      "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/mystic%20woman.png?v=2",
   },
 ];
 
@@ -68,12 +71,21 @@ const genders = ["Γυναίκα", "Άνδρας", "Άλλο/Μη δυαδικό
 const ages = ["18-24", "25-34", "35-44", "45-54", "55+"];
 
 export default function Cup() {
+  const navigate = useNavigate(); // ✅ ΝΕΟ
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
 
-  // Φέρνουμε το access token μόλις μπει η σελίδα
+  // ✅ Back που δουλεύει και σε preview/άμεση επίσκεψη
+  const handleBackClick = () => {
+    if (window.history.length > 2) {
+      navigate(-1);
+    } else {
+      navigate("/"); // fallback
+    }
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSessionToken(data.session?.access_token ?? null);
@@ -92,7 +104,6 @@ export default function Cup() {
     },
   });
 
-  // preview εικόνας
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     form.setValue("image", file);
@@ -104,7 +115,6 @@ export default function Cup() {
     }
   };
 
-  // προαιρετικό upload εικόνας στο bucket 'uploads' και επιστροφή public URL
   const uploadCupImage = async (file: File) => {
     const { data: user } = await supabase.auth.getUser();
     const uid = user.user?.id ?? "anonymous";
@@ -137,7 +147,6 @@ export default function Cup() {
         image_url = await uploadCupImage(values.image);
       }
     } catch (e: any) {
-      // Δεν μπλοκάρουμε την ανάγνωση αν αποτύχει το upload
       console.warn("Upload image failed:", e?.message ?? e);
     }
 
@@ -154,7 +163,6 @@ export default function Cup() {
           gender: values.gender,
           age_range: values.age_range,
         },
-        // >>> ΣΗΜΑΝΤΙΚΟ: Στέλνουμε JWT <<<
         headers: {
           Authorization: `Bearer ${sessionToken}`,
         },
@@ -165,9 +173,7 @@ export default function Cup() {
       if (data?.ok) {
         toast({
           title: "Ο χρησμός ετοιμάστηκε!",
-          description: `Ημερομηνία: ${new Date(
-            data.created_at
-          ).toLocaleString("el-GR")}`,
+          description: `Ημερομηνία: ${new Date(data.created_at).toLocaleString("el-GR")}`,
         });
         console.log("Reading:", data.text);
         console.log("TTS url:", data.tts_url);
@@ -187,12 +193,19 @@ export default function Cup() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Header */}
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-primary">
+          {/* ✅ Κουμπί Επιστροφή που λειτουργεί πάντα */}
+          <button
+            type="button"
+            onClick={handleBackClick}
+            className="flex items-center gap-2 text-primary hover:opacity-90"
+          >
             <ArrowLeft className="h-5 w-5" />
             <span>Επιστροφή</span>
-          </Link>
+          </button>
+
           <h1 className="text-2xl font-bold text-primary">
             <Coffee className="inline-block mr-2 h-6 w-6" />
             Ανάγνωση Φλιτζανιού
@@ -252,7 +265,9 @@ export default function Cup() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Στοιχεία Προφίλ</CardTitle>
-                    <CardDescription>Μας βοηθούν να προσαρμόσουμε καλύτερα τον τόνο & το περιεχόμενο.</CardDescription>
+                    <CardDescription>
+                      Μας βοηθούν να προσαρμόσουμε καλύτερα τον τόνο & το περιεχόμενο.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="grid md:grid-cols-2 gap-4">
@@ -264,9 +279,15 @@ export default function Cup() {
                           <FormItem>
                             <FormControl>
                               <Select onValueChange={field.onChange} value={field.value}>
-                                <SelectTrigger><SelectValue placeholder="Φύλο..." /></SelectTrigger>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Φύλο..." />
+                                </SelectTrigger>
                                 <SelectContent>
-                                  {genders.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                                  {genders.map((g) => (
+                                    <SelectItem key={g} value={g}>
+                                      {g}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                             </FormControl>
@@ -283,9 +304,15 @@ export default function Cup() {
                           <FormItem>
                             <FormControl>
                               <Select onValueChange={field.onChange} value={field.value}>
-                                <SelectTrigger><SelectValue placeholder="Ηλικιακό εύρος..." /></SelectTrigger>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Ηλικιακό εύρος..." />
+                                </SelectTrigger>
                                 <SelectContent>
-                                  {ages.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                  {ages.map((a) => (
+                                    <SelectItem key={a} value={a}>
+                                      {a}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                             </FormControl>
@@ -307,9 +334,15 @@ export default function Cup() {
                       <FormItem>
                         <FormControl>
                           <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger><SelectValue placeholder="Τομέας ενδιαφέροντος..." /></SelectTrigger>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Τομέας ενδιαφέροντος..." />
+                            </SelectTrigger>
                             <SelectContent>
-                              {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                              {categories.map((c) => (
+                                <SelectItem key={c} value={c}>
+                                  {c}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -325,9 +358,15 @@ export default function Cup() {
                       <FormItem>
                         <FormControl>
                           <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger><SelectValue placeholder="Στυλ/διάθεση..." /></SelectTrigger>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Στυλ/διάθεση..." />
+                            </SelectTrigger>
                             <SelectContent>
-                              {moods.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                              {moods.map((m) => (
+                                <SelectItem key={m} value={m}>
+                                  {m}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -359,7 +398,9 @@ export default function Cup() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Φωτογραφία Φλιτζανιού (προαιρετικό)</CardTitle>
-                    <CardDescription>Αν έχεις καθαρή φωτογραφία από το φλιτζάνι σου, ανέβασέ την.</CardDescription>
+                    <CardDescription>
+                      Αν έχεις καθαρή φωτογραφία από το φλιτζάνι σου, ανέβασέ την.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <label className="flex flex-col items-center justify-center w-full h-56 border-2 border-dashed rounded-xl cursor-pointer transition hover:border-primary/50">
