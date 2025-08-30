@@ -7,94 +7,155 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "13.0.4"
   }
   public: {
     Tables: {
-      profiles: {
+      predictions: {
         Row: {
-          avatar_url: string | null
-          bio: string | null
-          created_at: string
-          display_name: string | null
-          id: string
-          updated_at: string
-          user_id: string
-          username: string | null
+          created_at: string | null
+          parchment_url: string | null
+          pdf_url: string | null
+          prediction_id: string
+          session_id: string | null
+          text: string | null
+          tts_url: string | null
         }
         Insert: {
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string
-          display_name?: string | null
-          id?: string
-          updated_at?: string
-          user_id: string
-          username?: string | null
+          created_at?: string | null
+          parchment_url?: string | null
+          pdf_url?: string | null
+          prediction_id?: string
+          session_id?: string | null
+          text?: string | null
+          tts_url?: string | null
         }
         Update: {
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string
-          display_name?: string | null
-          id?: string
-          updated_at?: string
-          user_id?: string
-          username?: string | null
-        }
-        Relationships: []
-      }
-      user_roles: {
-        Row: {
-          created_at: string
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
+          created_at?: string | null
+          parchment_url?: string | null
+          pdf_url?: string | null
+          prediction_id?: string
+          session_id?: string | null
+          text?: string | null
+          tts_url?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "user_roles_user_id_fkey"
+            foreignKeyName: "predictions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["session_id"]
+          },
+        ]
+      }
+      readings: {
+        Row: {
+          age_range: string | null
+          created_at: string | null
+          gender: string | null
+          id: string
+          reader: string | null
+          text: string | null
+        }
+        Insert: {
+          age_range?: string | null
+          created_at?: string | null
+          gender?: string | null
+          id?: string
+          reader?: string | null
+          text?: string | null
+        }
+        Update: {
+          age_range?: string | null
+          created_at?: string | null
+          gender?: string | null
+          id?: string
+          reader?: string | null
+          text?: string | null
+        }
+        Relationships: []
+      }
+      sessions: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          image_url: string | null
+          mood: string | null
+          persona: string | null
+          question: string | null
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          image_url?: string | null
+          mood?: string | null
+          persona?: string | null
+          question?: string | null
+          session_id?: string
+          user_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          image_url?: string | null
+          mood?: string | null
+          persona?: string | null
+          question?: string | null
+          session_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "users"
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      users: {
+        Row: {
+          created_at: string | null
+          credits: number | null
+          email: string
+          name: string | null
+          plan: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          credits?: number | null
+          email: string
+          name?: string | null
+          plan?: string | null
+          user_id?: string
+        }
+        Update: {
+          created_at?: string | null
+          credits?: number | null
+          email?: string
+          name?: string | null
+          plan?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: Database["public"]["Enums"]["app_role"]
-      }
-      has_role: {
-        Args: {
-          _user_id: string
-          _role: Database["public"]["Enums"]["app_role"]
-        }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -221,8 +282,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      app_role: ["admin", "moderator", "user"],
-    },
+    Enums: {},
   },
 } as const
