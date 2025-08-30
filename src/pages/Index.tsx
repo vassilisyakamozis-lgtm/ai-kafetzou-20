@@ -1,19 +1,37 @@
 // src/pages/Cup.tsx
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Form, FormItem, FormMessage, FormField, FormControl } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormItem,
+  FormMessage,
+  FormField,
+  FormControl,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-import { Coffee, Sparkles, ImageIcon, Home as HomeIcon } from "lucide-react";
+import { Coffee, House, LogOut, LogIn, Sparkles, ImageIcon } from "lucide-react";
 
 type CupForm = {
   reader: string;
@@ -71,17 +89,30 @@ const genders = ["Γυναίκα", "Άνδρας", "Άλλο/Μη δυαδικό
 const ages = ["18-24", "25-34", "35-44", "45-54", "55+"];
 
 export default function Cup() {
-  const navigate = useNavigate();
   const { toast } = useToast();
+  const navigate = useNavigate();
+
   const [isLoading, setIsLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [isAuthed, setIsAuthed] = useState(false);
 
-  // Φέρνουμε το access token μόλις μπει η σελίδα
+  // Πάρε session για να δείξουμε Σύνδεση/Αποσύνδεση και για το invoke
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      setSessionToken(data.session?.access_token ?? null);
+      const token = data.session?.access_token ?? null;
+      setSessionToken(token);
+      setIsAuthed(Boolean(token));
     });
+    // live updates όταν αλλάζει το session
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      const token = s?.access_token ?? null;
+      setSessionToken(token);
+      setIsAuthed(Boolean(token));
+    });
+    return () => {
+      sub.subscription?.unsubscribe();
+    };
   }, []);
 
   const form = useForm<CupForm>({
@@ -108,27 +139,29 @@ export default function Cup() {
     }
   };
 
-  // προαιρετικό upload εικόνας στο bucket 'uploads' και επιστροφή public URL
+  // upload εικόνας στο bucket 'uploads' → public URL
   const uploadCupImage = async (file: File) => {
     const { data: user } = await supabase.auth.getUser();
     const uid = user.user?.id ?? "anonymous";
     const path = `cups/${uid}/${Date.now()}_${file.name}`;
-    const { error } = await supabase.storage.from("uploads").upload(path, file, {
-      upsert: true,
-      contentType: file.type || "image/jpeg",
-    });
+    const { error } = await supabase.storage
+      .from("uploads")
+      .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
     if (error) throw error;
     const { data } = supabase.storage.from("uploads").getPublicUrl(path);
     return data.publicUrl as string;
   };
 
   const onSubmit = async (values: CupForm) => {
+    // Αν δεν έχει session → πήγαινε για σύνδεση
     if (!sessionToken) {
       toast({
         title: "Απαιτείται σύνδεση",
         description: "Συνδέσου για να ξεκινήσεις την ανάγνωση.",
         variant: "destructive",
       });
+      // Αν έχεις σελίδα login διαφορετική, άλλαξέ το εδώ
+      navigate("/auth");
       return;
     }
 
@@ -141,8 +174,8 @@ export default function Cup() {
         image_url = await uploadCupImage(values.image);
       }
     } catch (e: any) {
-      // Δεν μπλοκάρουμε την ανάγνωση αν αποτύχει το upload
       console.warn("Upload image failed:", e?.message ?? e);
+      // δεν σταματάμε—προχωράμε χωρίς image_url
     }
 
     try {
@@ -158,10 +191,7 @@ export default function Cup() {
           gender: values.gender,
           age_range: values.age_range,
         },
-        // Στέλνουμε JWT (απαιτείται από το function)
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-        },
+        headers: { Authorization: `Bearer ${sessionToken}` },
       });
 
       if (error) throw error;
@@ -173,8 +203,10 @@ export default function Cup() {
             data.created_at
           ).toLocaleString("el-GR")}`,
         });
-        console.log("Reading:", data.text);
-        console.log("TTS url:", data.tts_url);
+
+        // 👉 εδώ κατευθύνεις στη σελίδα αποτελεσμάτων σου
+        // Αν δεν υπάρχει ακόμη, θα προσγειωθείς στο NotFound και θα το δεις στο console (ok).
+        navigate("/reading", { state: data });
       } else {
         throw new Error(data?.error ?? "Άγνωστο σφάλμα");
       }
@@ -189,10 +221,9 @@ export default function Cup() {
     }
   };
 
-  // χειριστής για “Home”
-  const goHome = () => {
-    // SPA πλοήγηση
-    navigate("/", { replace: false });
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast({ title: "Αποσύνδεση", description: "Έγινες αποσύνδεση." });
   };
 
   return (
@@ -200,33 +231,37 @@ export default function Cup() {
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          {/* Κουμπί Home (SPA) + ασφαλές fallback */}
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              className="flex items-center gap-2 text-primary"
-              onClick={goHome}
-            >
-              <HomeIcon className="h-5 w-5" />
-              <span>Home</span>
-            </Button>
-
-            {/* Fallback link (σε περίπτωση που δεν “παίζει” το route setup) */}
-            <a
-              href="/"
-              className="text-xs text-muted-foreground hover:underline"
-              aria-label="Fallback link to home"
-            >
-              / (fallback)
-            </a>
-          </div>
+          <Link to="/" className="flex items-center gap-2 text-primary">
+            <House className="h-5 w-5" />
+            <span>Home</span>
+          </Link>
 
           <h1 className="text-2xl font-bold text-primary">
             <Coffee className="inline-block mr-2 h-6 w-6" />
             Ανάγνωση Φλιτζανιού
           </h1>
-          <div />
+
+          <div className="flex items-center gap-3">
+            {!isAuthed ? (
+              <Link
+                to="/auth"
+                className="inline-flex items-center text-primary hover:underline"
+                title="Εγγραφή / Σύνδεση"
+              >
+                <LogIn className="h-4 w-4 mr-1" />
+                Εγγραφή / Σύνδεση
+              </Link>
+            ) : (
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center text-muted-foreground hover:text-primary"
+                title="Αποσύνδεση"
+              >
+                <LogOut className="h-4 w-4 mr-1" />
+                Αποσύνδεση
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -234,8 +269,11 @@ export default function Cup() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Επιλογή Καφετζούς</CardTitle>
-            <CardDescription>Διάλεξε ποια θα διαβάσει το φλιτζάνι σου</CardDescription>
+            <CardDescription>
+              Διάλεξε ποια θα διαβάσει το φλιτζάνι σου
+            </CardDescription>
           </CardHeader>
+
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -268,7 +306,6 @@ export default function Cup() {
                                 src={r.image}
                                 alt={r.name}
                                 className="w-full aspect-square object-cover"
-                                loading="lazy"
                               />
                               <div className="px-4 py-3 text-center">
                                 <div className="font-medium text-primary">{r.name}</div>
@@ -285,7 +322,7 @@ export default function Cup() {
                   )}
                 />
 
-                {/* Profile (gender / age) */}
+                {/* Profile */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Στοιχεία Προφίλ</CardTitle>
@@ -401,7 +438,7 @@ export default function Cup() {
                   />
                 </div>
 
-                {/* Question */}
+                {/* Optional question */}
                 <FormField
                   control={form.control}
                   name="question"
@@ -419,7 +456,7 @@ export default function Cup() {
                   )}
                 />
 
-                {/* Upload area (με placeholder + smooth preview) */}
+                {/* Upload area with dashed border kept */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Φωτογραφία Φλιτζανιού (προαιρετικό)</CardTitle>
@@ -429,7 +466,12 @@ export default function Cup() {
                   </CardHeader>
                   <CardContent>
                     <label className="flex flex-col items-center justify-center w-full h-56 border-2 border-dashed rounded-xl cursor-pointer transition hover:border-primary/50">
-                      <Input type="file" accept="image/*" onChange={handleImageChange} className="sr-only" />
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="sr-only"
+                      />
                       {imagePreview ? (
                         <img
                           src={imagePreview}
@@ -446,7 +488,12 @@ export default function Cup() {
                 </Card>
 
                 <div className="text-center">
-                  <Button type="submit" size="lg" disabled={isLoading} className="px-8">
+                  <Button
+                    type="submit"
+                    size="lg"
+                    disabled={isLoading}
+                    className="px-8"
+                  >
                     {isLoading ? (
                       <>
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
