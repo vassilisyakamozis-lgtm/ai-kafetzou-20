@@ -1,3 +1,4 @@
+
 // src/pages/CupReadingResult.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
@@ -41,7 +42,7 @@ export default function CupReadingResult() {
         if (id) {
           const { data, error } = await supabase.from("readings").select("*").eq("id", id).single();
           if (error) throw error;
-          if (!cancelled) setReading(data as ReadingRow);
+          if (!cancelled) setReading(data as unknown as ReadingRow);
         } else if (stateTemp) {
           const tmp: ReadingRow = {
             id: "temp",
