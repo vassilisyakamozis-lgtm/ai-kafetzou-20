@@ -15,7 +15,7 @@ export default function ReadingDetail() {
   const [err, setErr] = useState<string|null>(null);
 
   useEffect(() => {
-    const id = window.location.pathname.split('/').pop();
+    const id = new URLSearchParams(window.location.search).get('id') || '';
     if (!id) { setErr('Λείπει το id.'); return; }
 
     (async () => {

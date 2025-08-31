@@ -62,7 +62,7 @@ export default function ReadingStartPage() {
 
     setBusy(false);
     // 6) μετάβαση στη σελίδα αποτελέσματος
-    window.location.href = `/reading/${readingId}`;
+    window.location.href = `/reading/detail?id=${readingId}`;
   };
 
   if (!ready) return <div style={{padding:16}}>Έλεγχος σύνδεσης…</div>;
