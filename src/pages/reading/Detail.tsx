@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 type Reading = {
-  id: string;
-  image_path: string;
-  text: string | null;
-  tts_url: string | null;
-  created_at: string;
+id: string;
+image_path: string;
+oracle_text: string | null;
+tts_path: string | null;
+created_at: string;
 };
 
 export default function ReadingDetail() {
@@ -29,8 +29,8 @@ export default function ReadingDetail() {
   if (!reading) return <div style={{padding:16}}>Φόρτωση…</div>;
 
   const imageUrl = supabase.storage.from('cups').getPublicUrl(reading.image_path).data.publicUrl;
-  const ttsUrl = reading.tts_url
-    ? supabase.storage.from('tts').getPublicUrl(reading.tts_url).data.publicUrl
+  const ttsUrl = reading.tts_path
+    supabase.storage.from('tts').getPublicUrl(reading.tts_path).data.publicUrl
     : null;
 
   return (
