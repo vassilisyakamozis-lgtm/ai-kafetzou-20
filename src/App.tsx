@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 
 import Home from '@/pages/Home'     // ΣΤΑΤΙΚΟ import
 import Cup from '@/pages/Cup'       // ΣΤΑΤΙΚΟ import
-import AuthCallback from '@/pages/AuthCallback'
+import AuthCallback from '@/pages/auth/callback'
 
 export default function App() {
   return (
