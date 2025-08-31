@@ -37,7 +37,7 @@ export default function ReadingDetail() {
     <main style={{padding:16}}>
       <h1>Ο χρησμός σου</h1>
       <img src={imageUrl} alt="cup" style={{maxWidth:360, display:'block', marginBottom:12}} />
-      <pre style={{whiteSpace:'pre-wrap', fontFamily:'inherit'}}>{reading.text || '…'}</pre>
+      <pre style={{whiteSpace:'pre-wrap', fontFamily:'inherit'}}><pre>{reading.oracle_text || '…'}</pre></pre>
       {ttsUrl && (
         <audio controls src={ttsUrl} style={{marginTop:12}}/>
       )}
