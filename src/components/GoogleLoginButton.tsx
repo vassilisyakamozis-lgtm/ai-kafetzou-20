@@ -4,7 +4,7 @@ import { getAppOrigin } from '@/utils/auth';
 
 export default function GoogleLoginButton() {
   async function signIn() {
-    const redirectTo = `${getAppOrigin()}`;
+    const redirectTo = `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { scopes: 'email profile', redirectTo },
