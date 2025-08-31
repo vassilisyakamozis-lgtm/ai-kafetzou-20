@@ -5,17 +5,17 @@ import { supabase } from '@/lib/supabase';
 export default function ReadingStartPage() {
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string|null>(null);
-  const [file, setFile] = useState<File|null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
 
   useEffect(() => {
-    // βεβαιώσου ότι είμαστε logged in – αν όχι, στείλε για login και ξαναγύρνα εδώ
+    // Βεβαιώσου ότι είμαστε logged in – αν όχι, κάνε OAuth και γύρνα ξανά εδώ
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) {
         localStorage.setItem('returnTo', '/reading/start');
         supabase.auth.signInWithOAuth({
           provider: 'google',
-          options: { redirectTo: `${window.location.origin}/reading/start` }
+          options: { redirectTo: `${window.location.origin}/reading/start` },
         });
       } else {
         setReady(true);
@@ -25,63 +25,85 @@ export default function ReadingStartPage() {
 
   const run = async () => {
     setErr(null);
-    if (!file) { setErr('Διάλεξε εικόνα φλιτζανιού.'); return; }
-    if (!file.type.startsWith('image/')) { setErr('Μόνο εικόνες.'); return; }
-    if (file.size > 5 * 1024 * 1024) { setErr('Μέγιστο 5MB.'); return; }
+    if (!file) return setErr('Διάλεξε εικόνα φλιτζανιού.');
+    if (!file.type.startsWith('image/')) return setErr('Μόνο εικόνες.');
+    if (file.size > 5 * 1024 * 1024) return setErr('Μέγιστο 5MB.');
 
     setBusy(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setBusy(false); setErr('Απαιτείται σύνδεση.'); return; }
+    // 0) Χρήστης
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !userData.user) {
+      setBusy(false);
+      return setErr('Απαιτείται σύνδεση.');
+    }
+    const user = userData.user;
 
-    // 1) upload
+    // 1) Upload στο bucket "cups"
     const path = `${user.id}/${Date.now()}_${file.name}`;
     const up = await supabase.storage.from('cups').upload(path, file, { upsert: false });
-    if (up.error) { setBusy(false); setErr(up.error.message); return; }
+    if (up.error) {
+      setBusy(false);
+      return setErr(up.error.message);
+    }
 
-    // 2) public URL (για ανάλυση)
-    const pub = supabase.storage.from('cups').getPublicUrl(path);
-    const imageUrl = pub.data.publicUrl;
+    // 2) Public URL (για ανάλυση/προβολή)
+    const imageUrl = supabase.storage.from('cups').getPublicUrl(path).data.publicUrl;
 
-    // 3) δημιουργία row reading (μπορούμε να βάλουμε placeholder oracle_text πρώτα)
-    const ins = await supabase.from('readings').insert({
-      user_id: user.id,
-      image_path: path,
-      text: 'Δημιουργία χρησμού…'
-    }).select('*').single();
+    // 3) Δημιουργία εγγραφής στον πίνακα readings (placeholder κείμενο)
+    const ins = await supabase
+      .from('readings')
+      .insert({
+        user_id: user.id,
+        image_path: path,
+        oracle_text: 'Δημιουργία χρησμού…',
+      })
+      .select('*')
+      .single();
 
-    if (ins.error || !ins.data) { setBusy(false); setErr(ins.error?.message || 'Insert failed'); return; }
-    const readingId = ins.data.id;
+    if (ins.error || !ins.data) {
+      setBusy(false);
+      return setErr(ins.error?.message || 'Insert failed');
+    }
+    const readingId = ins.data.id as string;
 
-    // 4) (ΠΡΟΣΩΡΙΝΑ) παράγουμε χρησμό στον client ώστε να δεις ροή end-to-end
-    // ΣΕ ΠΑΡΑΓΩΓΗ: κάλεσε Supabase Edge Function / server route που μιλά στο OpenAI.
+    // 4) (ΠΡΟΣΩΡΙΝΑ) Δημιουργία χρησμού στον client για end-to-end ροή
     const fakeOracle = await createFakeOracle(imageUrl);
 
-    // 5) update με τον τελικό χρησμό
-    await supabase.from('readings').update({ text: fakeOracle }).eq('id', readingId);
+    // 5) Update με τον τελικό χρησμό
+    const upd = await supabase.from('readings').update({ oracle_text: fakeOracle }).eq('id', readingId);
+    if (upd.error) {
+      setBusy(false);
+      return setErr(upd.error.message);
+    }
 
     setBusy(false);
-    // 6) μετάβαση στη σελίδα αποτελέσματος
+    // 6) Μετάβαση στη σελίδα αποτελέσματος (detail με query id)
     window.location.href = `/reading/detail?id=${readingId}`;
   };
 
-  if (!ready) return <div style={{padding:16}}>Έλεγχος σύνδεσης…</div>;
+  if (!ready) return <div style={{ padding: 16 }}>Έλεγχος σύνδεσης…</div>;
 
   return (
-    <main style={{padding:16}}>
+    <main style={{ padding: 16 }}>
       <h1>Νέα Ανάγνωση</h1>
-      <input type="file" accept="image/*" onChange={e=>setFile(e.target.files?.[0]||null)} disabled={busy}/>
-      <button onClick={run} disabled={busy || !file} style={{marginLeft:8}}>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
+        disabled={busy}
+      />
+      <button onClick={run} disabled={busy || !file} style={{ marginLeft: 8 }}>
         {busy ? 'Ανάλυση…' : 'Ανάλυση φλιτζανιού'}
       </button>
-      {err && <p style={{color:'red'}}>{err}</p>}
-      <p style={{marginTop:8,opacity:.7}}>Μετά την ανάλυση θα μεταφερθείς αυτόματα στον χρησμό.</p>
+      {err && <p style={{ color: 'red' }}>{err}</p>}
+      <p style={{ marginTop: 8, opacity: 0.7 }}>Μετά την ανάλυση θα μεταφερθείς αυτόματα στον χρησμό.</p>
     </main>
   );
 }
 
-// ------ προσωρινή "δημιουργία χρησμού" για να δεις τη ροή να δουλεύει ------
+// ------ Προσωρινή "δημιουργία χρησμού" για να δεις τη ροή να δουλεύει ------
 async function createFakeOracle(imageUrl: string): Promise<string> {
-  // εδώ βάζουμε προσωρινό κείμενο. Σε production κάλεσε Edge Function με OpenAI Vision.
+  // Σε παραγωγή: κάλεσε Edge Function που μιλά στο OpenAI Vision.
   return `Είδα σημάδια ανανέωσης και τύχης. (demo)\nΕικόνα: ${imageUrl}`;
 }
