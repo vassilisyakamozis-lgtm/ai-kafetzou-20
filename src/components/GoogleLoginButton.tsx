@@ -1,5 +1,5 @@
 'use client';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { getAppOrigin } from '@/utils/auth';
 
 export default function GoogleLoginButton() {
