@@ -19,6 +19,7 @@ import AuthRedirectGuard from '@/hooks/AuthRedirectGuard';
 import { SignInWithGoogle, SignOut } from '@/components/AuthButtons';
 import StartReadingButton from '@/components/StartReadingButton';
 
+
 type CupForm = {
   reader: string;
   category: string;
