@@ -6,14 +6,14 @@ import { supabase } from '@/lib/supabase';
 
 type Props = PropsWithChildren<{
   className?: string;
-  text?: string; // αν δεν περάσεις children
+  text?: string;
 }>;
 
 /**
  * Ασφαλές, στιλισμένο CTA:
- * - Μπλοκάρει οποιοδήποτε <a> ή <form> wrapper (capture + bubble)
- * - Κάνει OAuth login αν λείπει session
- * - Πλοηγεί client-side (navigate) – ποτέ full reload
+ * - Μπλοκάρει ΟΠΟΙΟΝΔΗΠΟΤΕ <a> ή <form> wrapper (capture + bubble) για να μην γίνει full reload
+ * - Αν δεν υπάρχει session, κάνει Google OAuth και επιστρέφει στο /reading/start
+ * - Αν υπάρχει session, πλοηγεί client-side στο /reading/start
  */
 export default function SafeStartCTA({ className = '', text, children }: Props) {
   const navigate = useNavigate();
@@ -43,11 +43,10 @@ export default function SafeStartCTA({ className = '', text, children }: Props) 
   return (
     <button
       type="button"
-      onMouseDown={stop}        // “σκοτώνει” τυχόν <a>/<form> πριν την φάση click
-      onClickCapture={stop}     // κόβει bubbling/capture από wrappers
+      onMouseDown={stop}
+      onClickCapture={stop}
       onClick={start}
       className={
-        // default στιλ κουμπιού + extra classes από prop
         `inline-flex items-center justify-center
          px-5 py-3 rounded-xl font-semibold
          bg-violet-600 text-white shadow-md
