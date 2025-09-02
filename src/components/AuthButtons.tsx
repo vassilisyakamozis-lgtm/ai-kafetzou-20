@@ -1,10 +1,10 @@
+// src/components/AuthButtons.tsx
 'use client';
 import { supabase } from '@/lib/supabase';
 
 export function SignInWithGoogle() {
   const onClick = async () => {
-    const returnTo =
-      window.location.pathname + window.location.search + window.location.hash;
+    const returnTo = window.location.pathname + window.location.search + window.location.hash;
     localStorage.setItem('returnTo', returnTo);
     await supabase.auth.signInWithOAuth({
       provider: 'google',
