@@ -1,10 +1,20 @@
+// src/components/StartReadingButton.tsx
 'use client';
+import { MouseEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
 export default function StartReadingButton() {
-  const start = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+  const navigate = useNavigate();
+
+  const onClick = async (e: MouseEvent<HTMLButtonElement>) => {
+    // μπλοκάρει οποιοδήποτε <a> / <form> wrapper γύρω από το κουμπί
+    e.preventDefault();
+    e.stopPropagation();
+
     localStorage.setItem('returnTo', '/reading/start');
+
+    const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -12,7 +22,13 @@ export default function StartReadingButton() {
       });
       return;
     }
-    window.location.href = '/reading/start';
+    // client-side πλοήγηση (όχι full reload)
+    navigate('/reading/start');
   };
-  return <button onClick={start}>Ξεκίνα την Ανάγνωση</button>;
+
+  return (
+    <button type="button" onClick={onClick}>
+      Ξεκίνα την Ανάγνωση
+    </button>
+  );
 }
