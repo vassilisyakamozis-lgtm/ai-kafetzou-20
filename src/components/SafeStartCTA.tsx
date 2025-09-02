@@ -1,12 +1,21 @@
+// src/components/SafeStartCTA.tsx
 'use client';
-import { MouseEvent } from 'react';
+import { MouseEvent, PropsWithChildren } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
+type Props = PropsWithChildren<{
+  className?: string;
+  text?: string; // αν δεν περάσεις children
+}>;
+
 /**
- * Ασφαλές CTA που μπλοκάρει ΟΠΟΙΟΔΗΠΟΤΕ <a>/<form> wrapper και κάνει client-side navigate.
+ * Ασφαλές, στιλισμένο CTA:
+ * - Μπλοκάρει οποιοδήποτε <a> ή <form> wrapper (capture + bubble)
+ * - Κάνει OAuth login αν λείπει session
+ * - Πλοηγεί client-side (navigate) – ποτέ full reload
  */
-export default function SafeStartCTA() {
+export default function SafeStartCTA({ className = '', text, children }: Props) {
   const navigate = useNavigate();
 
   const stop = (e: MouseEvent) => {
@@ -16,6 +25,7 @@ export default function SafeStartCTA() {
 
   const start = async (e: MouseEvent<HTMLButtonElement>) => {
     stop(e);
+
     localStorage.setItem('returnTo', '/reading/start');
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -26,17 +36,28 @@ export default function SafeStartCTA() {
       });
       return;
     }
-    navigate('/reading/start');
+
+    navigate('/reading/start'); // ΧΩΡΙΣ full reload
   };
 
   return (
     <button
       type="button"
-      onMouseDown={stop}
-      onClickCapture={stop}
+      onMouseDown={stop}        // “σκοτώνει” τυχόν <a>/<form> πριν την φάση click
+      onClickCapture={stop}     // κόβει bubbling/capture από wrappers
       onClick={start}
+      className={
+        // default στιλ κουμπιού + extra classes από prop
+        `inline-flex items-center justify-center
+         px-5 py-3 rounded-xl font-semibold
+         bg-violet-600 text-white shadow-md
+         hover:bg-violet-700 active:bg-violet-800
+         focus:outline-none focus:ring-2 focus:ring-violet-400
+         disabled:opacity-60 disabled:cursor-not-allowed
+         transition-colors ${className}`
+      }
     >
-      Ξεκίνα την Ανάγνωση
+      {children ?? (text ?? 'Ξεκίνα την Ανάγνωση')}
     </button>
   );
 }
