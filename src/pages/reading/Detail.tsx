@@ -1,5 +1,7 @@
+// src/pages/reading/Detail.tsx
 'use client';
 import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
 type Reading = {
@@ -11,12 +13,15 @@ type Reading = {
 };
 
 export default function ReadingDetail() {
+  const { id } = useParams<{ id: string }>();
   const [reading, setReading] = useState<Reading | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get('id') || '';
-    if (!id) { setErr('Λείπει το id.'); return; }
+    if (!id) {
+      setErr('Λείπει το id.');
+      return;
+    }
 
     (async () => {
       const { data, error } = await supabase
@@ -24,15 +29,26 @@ export default function ReadingDetail() {
         .select('*')
         .eq('id', id)
         .single();
-      if (error) { setErr(error.message); return; }
+
+      if (error) {
+        setErr(error.message);
+        return;
+      }
       setReading(data as Reading);
     })();
-  }, []);
+  }, [id]);
 
-  if (err) return <div style={{ padding: 16, color: 'red' }}>{err}</div>;
-  if (!reading) return <div style={{ padding: 16 }}>Φόρτωση…</div>;
+  if (err) {
+    return <div style={{ padding: 16, color: 'red' }}>{err}</div>;
+  }
+  if (!reading) {
+    return <div style={{ padding: 16 }}>Φόρτωση…</div>;
+  }
 
-  const imageUrl = supabase.storage.from('cups').getPublicUrl(reading.image_path).data.publicUrl;
+  const imageUrl = supabase.storage
+    .from('cups')
+    .getPublicUrl(reading.image_path).data.publicUrl;
+
   const ttsUrl = reading.tts_path
     ? supabase.storage.from('tts').getPublicUrl(reading.tts_path).data.publicUrl
     : null;
@@ -40,15 +56,21 @@ export default function ReadingDetail() {
   return (
     <main style={{ padding: 16 }}>
       <h1>Ο χρησμός σου</h1>
+
       <img
         src={imageUrl}
         alt="cup"
         style={{ maxWidth: 360, display: 'block', marginBottom: 12 }}
       />
+
       <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
         {reading.oracle_text || '…'}
       </pre>
-      {ttsUrl && <audio controls src={ttsUrl} style={{ marginTop: 12 }} />}
+
+      {ttsUrl && (
+        <audio controls src={ttsUrl} style={{ marginTop: 12 }} />
+      )}
+
       <a href="/my-readings" style={{ display: 'inline-block', marginTop: 16 }}>
         ⬅ Πίσω στα Readings
       </a>
