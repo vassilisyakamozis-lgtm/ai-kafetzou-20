@@ -1,4 +1,3 @@
-// src/pages/reading/Start.tsx
 'use client';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -35,15 +34,12 @@ export default function ReadingStartPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setBusy(false); return setErr('Απαιτείται σύνδεση.'); }
 
-    // 1) Upload
     const path = `${user.id}/${Date.now()}_${file.name}`;
     const up = await supabase.storage.from('cups').upload(path, file, { upsert: false });
     if (up.error) { setBusy(false); return setErr(up.error.message); }
 
-    // 2) Public URL (για demo oracle)
     const imageUrl = supabase.storage.from('cups').getPublicUrl(path).data.publicUrl;
 
-    // 3) Insert reading
     const ins = await supabase.from('readings').insert({
       user_id: user.id,
       image_path: path,
@@ -53,15 +49,12 @@ export default function ReadingStartPage() {
     if (ins.error || !ins.data) { setBusy(false); return setErr(ins.error?.message || 'Insert failed'); }
     const readingId = ins.data.id as string;
 
-    // 4) Demo “oracle” (client-side)
     const fakeOracle = await createFakeOracle(imageUrl);
 
-    // 5) Update
     const upd = await supabase.from('readings').update({ oracle_text: fakeOracle }).eq('id', readingId);
     if (upd.error) { setBusy(false); return setErr(upd.error.message); }
 
     setBusy(false);
-    // 6) Redirect ΜΟΝΟ με React Router
     navigate(`/reading/${readingId}`, { replace: true });
   };
 
@@ -76,12 +69,7 @@ export default function ReadingStartPage() {
         onChange={(e) => setFile(e.target.files?.[0] || null)}
         disabled={busy}
       />
-      <button
-        type="button"
-        onClick={run}
-        disabled={busy || !file}
-        style={{ marginLeft: 8 }}
-      >
+      <button type="button" onClick={run} disabled={busy || !file} style={{ marginLeft: 8 }}>
         {busy ? 'Ανάλυση…' : 'Ανάλυση φλιτζανιού'}
       </button>
       {err && <p style={{ color: 'red' }}>{err}</p>}

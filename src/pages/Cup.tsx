@@ -18,6 +18,7 @@ import { Coffee, Sparkles, ImageIcon } from "lucide-react";
 import AuthRedirectGuard from '@/hooks/AuthRedirectGuard';
 import { SignInWithGoogle, SignOut } from '@/components/AuthButtons';
 import StartReadingButton from '@/components/StartReadingButton';
+import SafeStartCTA from '@/components/SafeStartCTA';
 
 
 type CupForm = {
@@ -290,7 +291,7 @@ export default function Cup() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <form onSubmit={(e)=>e.preventDefault()} className="space-y-8">
                 {/* Readers */}
                 <FormField
                   control={form.control}
@@ -469,19 +470,7 @@ export default function Cup() {
                 </Card>
 
                 <div className="text-center">
-                  <Button type="submit" size="lg" disabled={isFormDisabled} className="px-8">
-                    {isLoading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
-                        Προετοιμάζεται ο χρησμός...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="mr-2 h-5 w-5" />
-                        Ξεκίνα την Ανάγνωση
-                      </>
-                    )}
-                  </Button>
+                  <SafeStartCTA />
                 </div>
               </form>
             </Form>
