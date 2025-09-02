@@ -40,7 +40,11 @@ export default function ReadingDetail() {
   return (
     <main style={{ padding: 16 }}>
       <h1>Ο χρησμός σου</h1>
-      <img src={imageUrl} alt="cup" style={{ maxWidth: 360, display: 'block', marginBottom: 12 }} />
+      <img
+        src={imageUrl}
+        alt="cup"
+        style={{ maxWidth: 360, display: 'block', marginBottom: 12 }}
+      />
       <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
         {reading.oracle_text || '…'}
       </pre>
