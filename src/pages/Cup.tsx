@@ -15,6 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 import { Coffee, Sparkles, ImageIcon } from "lucide-react";
+import AuthRedirectGuard from '@/hooks/AuthRedirectGuard';
+import { SignInWithGoogle, SignOut } from '@/components/AuthButtons';
+import StartReadingButton from '@/components/StartReadingButton';
 
 type CupForm = {
   reader: string;
@@ -270,6 +273,13 @@ export default function Cup() {
           </Card>
         </div>
       )}
+
+      <AuthRedirectGuard />
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <SignInWithGoogle />
+        <SignOut />
+      </div>
+      <StartReadingButton />
 
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <Card className="mb-8">
