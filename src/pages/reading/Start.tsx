@@ -31,21 +31,28 @@ export default function ReadingStartPage() {
     if (!file) return setErr('Διάλεξε εικόνα φλιτζανιού.');
     if (!file.type.startsWith('image/')) return setErr('Μόνο εικόνες.');
     if (file.size > 5 * 1024 * 1024) return setErr('Μέγιστο 5MB.');
+
     setBusy(true);
 
-    // 0) Χρήστης
+    // 0) Έλεγχος χρήστη
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setBusy(false); return setErr('Απαιτείται σύνδεση.'); }
+    if (!user) {
+      setBusy(false);
+      return setErr('Απαιτείται σύνδεση.');
+    }
 
     // 1) Upload στο bucket "cups"
     const path = `${user.id}/${Date.now()}_${file.name}`;
     const up = await supabase.storage.from('cups').upload(path, file, { upsert: false });
-    if (up.error) { setBusy(false); return setErr(up.error.message); }
+    if (up.error) {
+      setBusy(false);
+      return setErr(up.error.message);
+    }
 
     // 2) Public URL (για ανάλυση/προβολή)
     const imageUrl = supabase.storage.from('cups').getPublicUrl(path).data.publicUrl;
 
-    // 3) Δημιουργία εγγραφής στον πίνακα readings (placeholder κείμενο)
+    // 3) Δημιουργία εγγραφής στον πίνακα readings (placeholder)
     const ins = await supabase
       .from('readings')
       .insert({
@@ -60,9 +67,10 @@ export default function ReadingStartPage() {
       setBusy(false);
       return setErr(ins.error?.message || 'Insert failed');
     }
+
     const readingId = ins.data.id as string;
 
-    // 4) (ΠΡΟΣΩΡΙΝΟ) Δημιουργία χρησμού στον client για end-to-end ροή
+    // 4) (ΠΡΟΣΩΡΙΝΟ) Δημιουργία χρησμού στον client για demo
     const fakeOracle = await createFakeOracle(imageUrl);
 
     // 5) Ενημέρωση του χρησμού
@@ -70,15 +78,21 @@ export default function ReadingStartPage() {
       .from('readings')
       .update({ oracle_text: fakeOracle })
       .eq('id', readingId);
-    if (upd.error) { setBusy(false); return setErr(upd.error.message); }
+
+    if (upd.error) {
+      setBusy(false);
+      return setErr(upd.error.message);
+    }
 
     setBusy(false);
 
-    // 6) Redirect ΜΕ React Router στο /reading/:id
+    // 6) Redirect με React Router στο /reading/:id
     navigate(`/reading/${readingId}`, { replace: true });
   };
 
-  if (!ready) return <div style={{ padding: 16 }}>Έλεγχος σύνδεσης…</div>;
+  if (!ready) {
+    return <div style={{ padding: 16 }}>Έλεγχος σύνδεσης…</div>;
+  }
 
   return (
     <main style={{ padding: 16 }}>
@@ -89,7 +103,12 @@ export default function ReadingStartPage() {
         onChange={(e) => setFile(e.target.files?.[0] || null)}
         disabled={busy}
       />
-      <button type="button" onClick={run} disabled={busy || !file} style={{ marginLeft: 8 }}>
+      <button
+        type="button"
+        onClick={run}
+        disabled={busy || !file}
+        style={{ marginLeft: 8 }}
+      >
         {busy ? 'Ανάλυση…' : 'Ανάλυση φλιτζανιού'}
       </button>
       {err && <p style={{ color: 'red' }}>{err}</p>}
