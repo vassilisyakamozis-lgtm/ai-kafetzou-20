@@ -12,7 +12,6 @@ export default function ReadingStartPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Αν δεν υπάρχει session, κάνε OAuth και γύρνα ξανά εδώ
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) {
         localStorage.setItem('returnTo', '/reading/start');
@@ -31,68 +30,42 @@ export default function ReadingStartPage() {
     if (!file) return setErr('Διάλεξε εικόνα φλιτζανιού.');
     if (!file.type.startsWith('image/')) return setErr('Μόνο εικόνες.');
     if (file.size > 5 * 1024 * 1024) return setErr('Μέγιστο 5MB.');
-
     setBusy(true);
 
-    // 0) Έλεγχος χρήστη
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setBusy(false);
-      return setErr('Απαιτείται σύνδεση.');
-    }
+    if (!user) { setBusy(false); return setErr('Απαιτείται σύνδεση.'); }
 
-    // 1) Upload στο bucket "cups"
+    // 1) Upload
     const path = `${user.id}/${Date.now()}_${file.name}`;
     const up = await supabase.storage.from('cups').upload(path, file, { upsert: false });
-    if (up.error) {
-      setBusy(false);
-      return setErr(up.error.message);
-    }
+    if (up.error) { setBusy(false); return setErr(up.error.message); }
 
-    // 2) Public URL (για ανάλυση/προβολή)
+    // 2) Public URL (για demo oracle)
     const imageUrl = supabase.storage.from('cups').getPublicUrl(path).data.publicUrl;
 
-    // 3) Δημιουργία εγγραφής στον πίνακα readings (placeholder)
-    const ins = await supabase
-      .from('readings')
-      .insert({
-        user_id: user.id,
-        image_path: path,
-        oracle_text: 'Δημιουργία χρησμού…',
-      })
-      .select('*')
-      .single();
+    // 3) Insert reading
+    const ins = await supabase.from('readings').insert({
+      user_id: user.id,
+      image_path: path,
+      oracle_text: 'Δημιουργία χρησμού…',
+    }).select('*').single();
 
-    if (ins.error || !ins.data) {
-      setBusy(false);
-      return setErr(ins.error?.message || 'Insert failed');
-    }
-
+    if (ins.error || !ins.data) { setBusy(false); return setErr(ins.error?.message || 'Insert failed'); }
     const readingId = ins.data.id as string;
 
-    // 4) (ΠΡΟΣΩΡΙΝΟ) Δημιουργία χρησμού στον client για demo
+    // 4) Demo “oracle” (client-side)
     const fakeOracle = await createFakeOracle(imageUrl);
 
-    // 5) Ενημέρωση του χρησμού
-    const upd = await supabase
-      .from('readings')
-      .update({ oracle_text: fakeOracle })
-      .eq('id', readingId);
-
-    if (upd.error) {
-      setBusy(false);
-      return setErr(upd.error.message);
-    }
+    // 5) Update
+    const upd = await supabase.from('readings').update({ oracle_text: fakeOracle }).eq('id', readingId);
+    if (upd.error) { setBusy(false); return setErr(upd.error.message); }
 
     setBusy(false);
-
-    // 6) Redirect με React Router στο /reading/:id
+    // 6) Redirect ΜΟΝΟ με React Router
     navigate(`/reading/${readingId}`, { replace: true });
   };
 
-  if (!ready) {
-    return <div style={{ padding: 16 }}>Έλεγχος σύνδεσης…</div>;
-  }
+  if (!ready) return <div style={{ padding: 16 }}>Έλεγχος σύνδεσης…</div>;
 
   return (
     <main style={{ padding: 16 }}>
@@ -119,7 +92,6 @@ export default function ReadingStartPage() {
   );
 }
 
-// ------ Προσωρινή "δημιουργία χρησμού" για end-to-end ροή ------
 async function createFakeOracle(imageUrl: string): Promise<string> {
   return `Είδα σημάδια ανανέωσης και τύχης. (demo)\nΕικόνα: ${imageUrl}`;
 }
