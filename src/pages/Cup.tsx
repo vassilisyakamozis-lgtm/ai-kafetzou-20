@@ -1,24 +1,16 @@
 import { useState } from "react";
 
+/**
+ * CUP PAGE — ROBUST ROLLBACK + FIX
+ * - Επαναφέρει header, picker, φόρμα
+ * - Self-contained, χωρίς shadcn/ui
+ * - Περιλαμβάνει inline CSS override για να ακυρώσει overflow/height από wrappers
+ */
+
 const FORTUNE_TELLERS = [
-  {
-    id: "classic",
-    name: "Κλασική Καφετζού",
-    desc: "παραδοσιακό, ζεστό ύφος",
-    img: "/assets/kafetzou-classic.png", // άλλαξέ τα σε δικά σου paths αν χρειάζεται
-  },
-  {
-    id: "young",
-    name: "Νεαρή Καφετζού",
-    desc: "ανάλαφρο, παιχνιδιάρικο ύφος",
-    img: "/assets/kafetzou-young.png",
-  },
-  {
-    id: "mystic",
-    name: "Μυστική Μάντισσα",
-    desc: "ποιητικό, μυσταγωγικό ύφος",
-    img: "/assets/kafetzou-mystic.png",
-  },
+  { id: "classic", name: "Κλασική Καφετζού", desc: "παραδοσιακό, ζεστό ύφος", img: "/assets/kafetzou-classic.png" },
+  { id: "young",   name: "Νεαρή Καφετζού",   desc: "ανάλαφρο, παιχνιδιάρικο ύφος", img: "/assets/kafetzou-young.png" },
+  { id: "mystic",  name: "Μυστική Μάντισσα", desc: "ποιητικό, μυσταγωγικό ύφος",  img: "/assets/kafetzou-mystic.png" },
 ] as const;
 
 type PersonaId = typeof FORTUNE_TELLERS[number]["id"];
@@ -26,29 +18,30 @@ type PersonaId = typeof FORTUNE_TELLERS[number]["id"];
 export default function CupPage() {
   const [pickerOpen, setPickerOpen] = useState(true);
   const [persona, setPersona] = useState<PersonaId>("classic");
-  const [gender, setGender] = useState("male");
-  const [age, setAge] = useState("35-44");
-  const [topic, setTopic] = useState("spiritual");
+  const [gender, setGender]   = useState("male");
+  const [age, setAge]         = useState("35-44");
+  const [topic, setTopic]     = useState("spiritual");
   const [question, setQuestion] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile]       = useState<File | null>(null);
 
   function startReading() {
-    // Αν έχεις react-router, μπορείς να χρησιμοποιήσεις navigate().
-    // Εδώ κάνουμε απλό redirect ώστε να δουλεύει παντού.
-    const params = new URLSearchParams({
-      persona,
-      gender,
-      age,
-      topic,
-      question,
-    });
-    // Note: αρχείο δεν περνάει με query· το χειριζόμαστε αργότερα με upload.
+    const params = new URLSearchParams({ persona, gender, age, topic, question });
     window.location.href = `/reading?${params.toString()}`;
   }
 
   return (
     <div style={{ minHeight: "100vh", background: "#fdf7fb", color: "#333" }}>
-      {/* HEADER (σταθερό, χωρίς εξαρτήσεις) */}
+      {/* HARDENING: Ακυρώνει overflow/height από γονικούς wrappers */}
+      <style>{`
+        html, body, #root { min-height: 100%; height: auto !important; }
+        /* Συχνά wrappers που «τρώνε» το header */
+        .wrapper, .container, .page, .layout, .lovable-root, .SafeStartCTA, .SafeWrapper {
+          overflow: visible !important; height: auto !important; min-height: 100% !important;
+        }
+        header, section, main { position: relative; }
+      `}</style>
+
+      {/* HEADER */}
       <header
         style={{
           position: "sticky",
@@ -64,45 +57,21 @@ export default function CupPage() {
       >
         <div style={{ fontSize: "20px", fontWeight: "bold" }}>AI Καφετζού</div>
         <nav style={{ display: "flex", gap: "10px" }}>
-          <a href="/signup">
-            <button>Εγγραφή</button>
-          </a>
-          <a href="/login">
-            <button>Σύνδεση</button>
-          </a>
-          <a href="/logout">
-            <button>Έξοδος</button>
-          </a>
+          <a href="/signup"><button>Εγγραφή</button></a>
+          <a href="/login"><button>Σύνδεση</button></a>
+          <a href="/logout"><button>Έξοδος</button></a>
         </nav>
       </header>
 
-      {/* PERSONA PICKER */}
+      {/* PICKER */}
       <section style={{ maxWidth: "900px", margin: "20px auto", padding: "0 20px" }}>
-        <div
-          style={{
-            border: "2px dashed #ddd",
-            borderRadius: "10px",
-            padding: "20px",
-            background: "#fff",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: "12px",
-            }}
-          >
+        <div style={{ border: "2px dashed #ddd", borderRadius: "10px", padding: "20px", background: "#fff" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <div>
               <h2 style={{ margin: 0 }}>Διάλεξε Καφετζού</h2>
-              <p style={{ fontSize: "14px", color: "#666", marginTop: "4px" }}>
-                Καθορίζει το ύφος απάντησης (κείμενο & αφήγηση).
-              </p>
+              <p style={{ fontSize: 14, color: "#666", marginTop: 4 }}>Καθορίζει το ύφος απάντησης (κείμενο & αφήγηση).</p>
             </div>
-            <button onClick={() => setPickerOpen((v) => !v)}>
-              {pickerOpen ? "Απόκρυψη" : "Εμφάνιση"}
-            </button>
+            <button onClick={() => setPickerOpen(v => !v)}>{pickerOpen ? "Απόκρυψη" : "Εμφάνιση"}</button>
           </div>
 
           {pickerOpen && (
@@ -110,18 +79,18 @@ export default function CupPage() {
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: "15px",
-                marginTop: "20px",
+                gap: 15,
+                marginTop: 20,
               }}
             >
-              {FORTUNE_TELLERS.map((f) => (
+              {FORTUNE_TELLERS.map(f => (
                 <button
                   key={f.id}
                   onClick={() => setPersona(f.id)}
                   style={{
                     border: persona === f.id ? "2px solid purple" : "1px solid #ccc",
-                    borderRadius: "10px",
-                    padding: "10px",
+                    borderRadius: 10,
+                    padding: 10,
                     background: "#fafafa",
                     textAlign: "left",
                     cursor: "pointer",
@@ -131,27 +100,21 @@ export default function CupPage() {
                     style={{
                       aspectRatio: "4/3",
                       background: "#f3e9f9",
-                      borderRadius: "8px",
+                      borderRadius: 8,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       overflow: "hidden",
                     }}
                   >
-                    <img
-                      src={f.img}
-                      alt={f.name}
-                      style={{ maxHeight: "100%", maxWidth: "100%" }}
-                    />
+                    <img src={f.img} alt={f.name} style={{ maxHeight: "100%", maxWidth: "100%" }} />
                   </div>
-                  <div style={{ marginTop: "8px" }}>
+                  <div style={{ marginTop: 8 }}>
                     <strong>{f.name}</strong>
-                    <p style={{ fontSize: "12px", color: "#666", margin: 0 }}>{f.desc}</p>
+                    <p style={{ fontSize: 12, color: "#666", margin: 0 }}>{f.desc}</p>
                   </div>
                   {persona === f.id && (
-                    <div style={{ color: "purple", fontSize: "12px", marginTop: "4px" }}>
-                      ✓ Επιλεγμένη
-                    </div>
+                    <div style={{ color: "purple", fontSize: 12, marginTop: 4 }}>✓ Επιλεγμένη</div>
                   )}
                 </button>
               ))}
@@ -160,27 +123,15 @@ export default function CupPage() {
         </div>
       </section>
 
-      {/* PROFILE FORM */}
+      {/* FORM */}
       <main style={{ maxWidth: "900px", margin: "20px auto", padding: "0 20px" }}>
         <h1 style={{ marginTop: 0 }}>Στοιχεία Προφίλ</h1>
 
-        <div
-          style={{
-            background: "#fff",
-            padding: "20px",
-            borderRadius: "10px",
-            marginTop: "10px",
-            border: "1px solid #eee",
-          }}
-        >
-          <div style={{ display: "grid", gap: "15px" }}>
+        <div style={{ background: "#fff", padding: 20, borderRadius: 10, marginTop: 10, border: "1px solid #eee" }}>
+          <div style={{ display: "grid", gap: 15 }}>
             <div>
               <label>Φύλο</label>
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                style={{ display: "block", width: "100%", marginTop: "5px" }}
-              >
+              <select value={gender} onChange={e => setGender(e.target.value)} style={{ display: "block", width: "100%", marginTop: 5 }}>
                 <option value="male">Άνδρας</option>
                 <option value="female">Γυναίκα</option>
                 <option value="other">Άλλο</option>
@@ -189,11 +140,7 @@ export default function CupPage() {
 
             <div>
               <label>Ηλικία</label>
-              <select
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                style={{ display: "block", width: "100%", marginTop: "5px" }}
-              >
+              <select value={age} onChange={e => setAge(e.target.value)} style={{ display: "block", width: "100%", marginTop: 5 }}>
                 <option value="18-24">18-24</option>
                 <option value="25-34">25-34</option>
                 <option value="35-44">35-44</option>
@@ -204,11 +151,7 @@ export default function CupPage() {
 
             <div>
               <label>Θεματική</label>
-              <select
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                style={{ display: "block", width: "100%", marginTop: "5px" }}
-              >
+              <select value={topic} onChange={e => setTopic(e.target.value)} style={{ display: "block", width: "100%", marginTop: 5 }}>
                 <option value="love">Ερωτικά</option>
                 <option value="career">Επαγγελματικά</option>
                 <option value="luck">Τύχη</option>
@@ -221,61 +164,34 @@ export default function CupPage() {
               <label>Προαιρετική ερώτηση</label>
               <textarea
                 value={question}
-                onChange={(e) => setQuestion(e.target.value)}
+                onChange={e => setQuestion(e.target.value)}
                 placeholder="π.χ. Θα βρω αγάπη φέτος;"
-                style={{ display: "block", width: "100%", marginTop: "5px", minHeight: 80 }}
+                style={{ display: "block", width: "100%", marginTop: 5, minHeight: 80 }}
               />
             </div>
 
             <div>
               <label>Φωτογραφία Φλιτζανιού (προαιρετικό)</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                style={{ display: "block", marginTop: "5px" }}
-              />
-              {file && (
-                <div style={{ fontSize: 12, color: "#666", marginTop: 6 }}>
-                  Επιλέχθηκε: {file.name}
-                </div>
-              )}
+              <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] ?? null)} style={{ display: "block", marginTop: 5 }} />
+              {file && <div style={{ fontSize: 12, color: "#666", marginTop: 6 }}>Επιλέχθηκε: {file.name}</div>}
             </div>
 
             <div>
               <button
                 onClick={startReading}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  background: "purple",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                }}
+                style={{ width: "100%", padding: 12, background: "purple", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer" }}
               >
                 Ξεκίνα την Ανάγνωση
               </button>
-              <p style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>
-                * Αν δεν επιλέξεις καφετζού, χρησιμοποιείται προεπιλογή:
-                <strong> Κλασική</strong>.
+              <p style={{ fontSize: 12, color: "#666", marginTop: 5 }}>
+                * Αν δεν επιλέξεις καφετζού, χρησιμοποιείται προεπιλογή: <strong>Κλασική</strong>.
               </p>
             </div>
           </div>
         </div>
       </main>
 
-      <footer
-        style={{
-          maxWidth: "900px",
-          margin: "20px auto",
-          padding: "10px",
-          textAlign: "center",
-          fontSize: "12px",
-          color: "#666",
-        }}
-      >
+      <footer style={{ maxWidth: "900px", margin: "20px auto", padding: 10, textAlign: "center", fontSize: 12, color: "#666" }}>
         © {new Date().getFullYear()} AI Καφετζού
       </footer>
     </div>
