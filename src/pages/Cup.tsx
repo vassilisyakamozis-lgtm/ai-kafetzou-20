@@ -1,10 +1,10 @@
 import { useState } from "react";
 
 /**
- * CUP PAGE — ROBUST ROLLBACK + FIX
- * - Επαναφέρει header, picker, φόρμα
- * - Self-contained, χωρίς shadcn/ui
- * - Περιλαμβάνει inline CSS override για να ακυρώσει overflow/height από wrappers
+ * CUP PAGE — ROBUST RESET
+ * - Header + Picker + Φόρμα
+ * - Plain React + HTML (no shadcn/ui)
+ * - Καταργεί ύποπτα overflow/height από wrappers ώστε να ΜΗΝ «κόβεται» το επάνω μέρος.
  */
 
 const FORTUNE_TELLERS = [
@@ -31,10 +31,9 @@ export default function CupPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#fdf7fb", color: "#333" }}>
-      {/* HARDENING: Ακυρώνει overflow/height από γονικούς wrappers */}
+      {/* HARDENING: ακυρώνει «τοξικά» styles γονέων */}
       <style>{`
         html, body, #root { min-height: 100%; height: auto !important; }
-        /* Συχνά wrappers που «τρώνε» το header */
         .wrapper, .container, .page, .layout, .lovable-root, .SafeStartCTA, .SafeWrapper {
           overflow: visible !important; height: auto !important; min-height: 100% !important;
         }
