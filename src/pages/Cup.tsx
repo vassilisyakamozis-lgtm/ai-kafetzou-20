@@ -9,19 +9,18 @@ const PERSONAS: { id: PersonaId; name: string; desc: string; img: string }[] = [
     id: "classic",
     name: "Κλασική Καφετζού",
     desc: "παραδοσιακό, ζεστό ύφος",
-    // αν έχεις διαφορετικό όνομα αρχείου, άλλαξέ το εδώ:
     img: "/assets/kafetzou-classic.png",
   },
   {
     id: "young",
-    name: "Νεαρή Καφετζού",
-    desc: "ανάλαφρο, παιχνιδιάρικο ύφος",
+    name: "Κατίνα η Σμυρνιά",
+    desc: "από τη Σμύρνη με αγάπη και παράδοση",
     img: "/assets/kafetzou-young.png",
   },
   {
     id: "mystic",
-    name: "Μυστική Μάντισσα",
-    desc: "ποιητικό, μυστηριώδες ύφος",
+    name: "Ισιδώρα η Πνευματική",
+    desc: "συνδέει τον κόσμο με το πνεύμα",
     img: "/assets/kafetzou-mystic.png",
   },
 ];
@@ -119,13 +118,6 @@ export default function Cup() {
             οι συμβολισμοί αποκτούν φωνή — εξατομικευμένα, ζεστά και ουσιαστικά.
           </p>
         </div>
-
-        <img
-          src={personaObj.img}
-          alt={personaObj.name}
-          className="w-56 h-56 object-contain select-none"
-          draggable={false}
-        />
       </header>
 
       {/* PERSONAS */}
