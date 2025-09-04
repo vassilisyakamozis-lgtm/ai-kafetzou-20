@@ -14,15 +14,12 @@ export default function ReadingStartPage() {
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) {
         localStorage.setItem('returnTo', '/reading/start');
-        supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: { redirectTo: `${window.location.origin}/reading/start` },
-        });
+        navigate('/auth', { replace: true });
       } else {
         setReady(true);
       }
     });
-  }, []);
+  }, [navigate]);
 
   const run = async () => {
     setErr(null);
@@ -35,24 +32,25 @@ export default function ReadingStartPage() {
     if (!user) { setBusy(false); return setErr('Απαιτείται σύνδεση.'); }
 
     const path = `${user.id}/${Date.now()}_${file.name}`;
-    const up = await supabase.storage.from('cups').upload(path, file, { upsert: false });
+    const up = await supabase.storage.from('cups').upload(path, file);
     if (up.error) { setBusy(false); return setErr(up.error.message); }
 
     const imageUrl = supabase.storage.from('cups').getPublicUrl(path).data.publicUrl;
 
+    // Προκαταχώρηση reading
     const ins = await supabase.from('readings').insert({
       user_id: user.id,
-      image_path: path,
-      oracle_text: 'Δημιουργία χρησμού…',
-    }).select('*').single();
+      image_url: imageUrl,
+      text: 'Δημιουργία χρησμού…'
+    }).select('id').single();
 
     if (ins.error || !ins.data) { setBusy(false); return setErr(ins.error?.message || 'Insert failed'); }
+
     const readingId = ins.data.id as string;
 
-    const fakeOracle = await createFakeOracle(imageUrl);
-
-    const upd = await supabase.from('readings').update({ oracle_text: fakeOracle }).eq('id', readingId);
-    if (upd.error) { setBusy(false); return setErr(upd.error.message); }
+    // DEMO “oracle” – μέχρι να κουμπώσουμε OpenAI
+    const oracle = await createFakeOracle(imageUrl);
+    await supabase.from('readings').update({ text: oracle }).eq('id', readingId);
 
     setBusy(false);
     navigate(`/reading/${readingId}`, { replace: true });
@@ -63,23 +61,15 @@ export default function ReadingStartPage() {
   return (
     <main style={{ padding: 16 }}>
       <h1>Νέα Ανάγνωση</h1>
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => setFile(e.target.files?.[0] || null)}
-        disabled={busy}
-      />
+      <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} disabled={busy} />
       <button type="button" onClick={run} disabled={busy || !file} style={{ marginLeft: 8 }}>
         {busy ? 'Ανάλυση…' : 'Ανάλυση φλιτζανιού'}
       </button>
-      {err && <p style={{ color: 'red' }}>{err}</p>}
-      <p style={{ marginTop: 8, opacity: 0.7 }}>
-        Μετά την ανάλυση θα μεταφερθείς αυτόματα στον χρησμό.
-      </p>
+      {err && <p style={{ color: 'crimson' }}>{err}</p>}
     </main>
   );
 }
 
-async function createFakeOracle(imageUrl: string): Promise<string> {
-  return `Είδα σημάδια ανανέωσης και τύχης. (demo)\nΕικόνα: ${imageUrl}`;
+async function createFakeOracle(imageUrl: string) {
+  return `Είδα σημάδια ανανέωσης και τύχης.\nΕικόνα: ${imageUrl}`;
 }
