@@ -10,20 +10,19 @@ const PERSONAS: { id: PersonaId; name: string; desc: string; img: string }[] = [
     name: "Κλασική Καφετζού",
     desc: "παραδοσιακό, ζεστό ύφος",
     // αν έχεις διαφορετικό όνομα αρχείου, άλλαξέ το εδώ:
-    img: "/assets/katina-klassiki.png",
+    img: "/assets/kafetzou-classic.png",
   },
   {
     id: "young",
     name: "Νεαρή Καφετζού",
     desc: "ανάλαφρο, παιχνιδιάρικο ύφος",
-    // προσοχή: το αρχείο έχει κενό—χρησιμοποιούμε %20
-    img: "/assets/modern%20woman.png",
+    img: "/assets/kafetzou-young.png",
   },
   {
     id: "mystic",
     name: "Μυστική Μάντισσα",
     desc: "ποιητικό, μυστηριώδες ύφος",
-    img: "/assets/mystic%20woman.png",
+    img: "/assets/kafetzou-mystic.png",
   },
 ];
 
