@@ -1,18 +1,28 @@
-import { useEffect } from 'react';
-import { supabase } from '../../integrations/supabase/client';
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 
 export default function AuthCallback() {
-  useEffect(() => {
-    // Το supabase-js (detectSessionInUrl: true) θα διαβάσει το #access_token
-    // και θα αποθηκεύσει το session. Μετά κάνουμε redirect εκεί που θες.
-    (async () => {
-      try {
-        await supabase.auth.getSession(); // πυροδοτεί ανάγνωση tokens από το URL
-      } finally {
-        window.location.replace('/cup'); // άλλαξέ το στο dashboard/home σου
-      }
-    })();
-  }, []);
+  const nav = useNavigate();
 
-  return <div style={{padding: 24}}>Signing you in…</div>;
+  useEffect(() => {
+    let mounted = true;
+    const go = async () => {
+      // Μόλις ολοκληρωθεί το OAuth, η session είναι ήδη αποθηκευμένη.
+      const { data } = await supabase.auth.getSession();
+      const ret = localStorage.getItem("returnTo") || "/";
+      localStorage.removeItem("returnTo");
+      if (mounted) nav(ret, { replace: true });
+    };
+    go();
+    return () => {
+      mounted = false;
+    };
+  }, [nav]);
+
+  return (
+    <div className="mx-auto max-w-md px-4 py-12">
+      <p>Σύνδεση ολοκληρώνεται…</p>
+    </div>
+  );
 }
