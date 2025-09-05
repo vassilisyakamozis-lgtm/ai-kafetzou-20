@@ -9,19 +9,19 @@ const PERSONAS: { id: PersonaId; name: string; desc: string; img: string }[] = [
     id: "classic",
     name: "Μαίρη, η 'ψαγμένη'",
     desc: "έμπειρη καφετζού με βαθιά γνώση και παράδοση",
-    img: "/lovable-uploads/fb2ced7f-3a10-44ac-b0e6-3a29551a5e3f.png",
+    img: "/images/personas/maria.png",
   },
   {
     id: "young",
     name: "Ρένα, η μοντέρνα",
     desc: "σύγχρονη προσέγγιση με νεανικό πνεύμα",
-    img: "/lovable-uploads/745cf168-0332-4afd-b558-fc54db9eef18.png",
+    img: "/images/personas/rena.png",
   },
   {
     id: "mystic",
     name: "Ισιδώρα, η πνευματική",
     desc: "συνδέει τον κόσμο με το πνεύμα και τη σοφία",
-    img: "/lovable-uploads/ac472d31-2787-4950-9fa2-8fe551005e5d.png",
+    img: "/images/personas/isidora.png",
   },
 ];
 
