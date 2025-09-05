@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
@@ -9,94 +9,159 @@ const PERSONAS: { id: PersonaId; name: string; desc: string; img: string }[] = [
     id: "classic",
     name: "Μαίρη, η 'ψαγμένη'",
     desc: "έμπειρη καφετζού με βαθιά γνώση και παράδοση",
-    img: "/lovable-uploads/76bfd292-61ab-4ab5-8792-85983b85c1bf.png",
+    img: "/lovable-uploads/fb2ced7f-3a10-44ac-b0e6-3a29551a5e3f.png",
   },
   {
     id: "young",
     name: "Ρένα, η μοντέρνα",
     desc: "σύγχρονη προσέγγιση με νεανικό πνεύμα",
-    img: "/lovable-uploads/039654c0-6d79-4e1c-ac33-9398c884769f.png",
+    img: "/lovable-uploads/745cf168-0332-4afd-b558-fc54db9eef18.png",
   },
   {
     id: "mystic",
-    name: "Ισιδώρα, η πνευματική", 
+    name: "Ισιδώρα, η πνευματική",
     desc: "συνδέει τον κόσμο με το πνεύμα και τη σοφία",
-    img: "/lovable-uploads/ca15805c-fcec-4c13-8233-088a28b93c28.png",
+    img: "/lovable-uploads/ac472d31-2787-4950-9fa2-8fe551005e5d.png",
   },
 ];
 
-const MOODS = ["Ουδέτερο", "Χαρούμενο", "Αγχωμένο", "Θλιμμένο"] as const;
+// 2.1 Φύλο (required)
+const GENDERS = ["Άνδρας", "Γυναίκα", "Άλλο"] as const;
+type Gender = (typeof GENDERS)[number];
+
+// 2.2 Ηλικιακά group (required)
+const AGE_GROUPS = ["17-24", "25-34", "35-44", "45-54", "55-64", "65+"] as const;
+type AgeGroup = (typeof AGE_GROUPS)[number];
+
+// 2.3 Κατάσταση (εμπλουτισμένη)
+const MOODS = [
+  "Ουδέτερο",
+  "Χαρούμενο",
+  "Αγχωμένο",
+  "Θλιμμένο",
+  "Αναποφάσιστο/η",
+  "Στενοχωρημένο/η",
+  "Ενθουσιασμένο/η",
+  "Ερωτευμένο/η",
+] as const;
 type Mood = (typeof MOODS)[number];
 
-const TOPICS = ["Έρωτας", "Τύχη", "Καριέρα", "Οικογένεια", "Υγεία", "Χρήματα"] as const;
+// 2.4 Θέματα
+const TOPICS = ["Έρωτας", "Τύχη", "Καριέρα", "Οικογένεια", "Υγεία", "Χρήματα", "Ταξίδια", "Φίλοι"] as const;
 type Topic = (typeof TOPICS)[number];
+
+type PersistedForm = {
+  persona: PersonaId;
+  gender: Gender | "";
+  age: AgeGroup | "";
+  mood: Mood;
+  topics: Topic[];
+  question: string;
+};
 
 export default function Cup() {
   const nav = useNavigate();
 
+  // --- state
   const [persona, setPersona] = useState<PersonaId>("classic");
+  const [gender, setGender] = useState<Gender | "">("");
+  const [age, setAge] = useState<AgeGroup | "">("");
   const [mood, setMood] = useState<Mood>("Ουδέτερο");
   const [topics, setTopics] = useState<Topic[]>([]);
+  const [question, setQuestion] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // --- restore pending form (αν γύρισες από /auth)
+  useEffect(() => {
+    const raw = localStorage.getItem("cupForm");
+    if (raw) {
+      try {
+        const f = JSON.parse(raw) as PersistedForm;
+        if (f.persona) setPersona(f.persona);
+        setGender(f.gender);
+        setAge(f.age);
+        setMood(f.mood ?? "Ουδέτερο");
+        setTopics(f.topics ?? []);
+        setQuestion(f.question ?? "");
+      } catch {}
+      localStorage.removeItem("cupForm");
+    }
+  }, []);
+
+  // --- derived
   const personaObj = useMemo(
     () => PERSONAS.find((p) => p.id === persona)!,
     [persona]
   );
 
-  const toggleTopic = (t: Topic) => {
+  const toggleTopic = (t: Topic) =>
     setTopics((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+
+  const onFile = (f: File | null) => {
+    setFile(f);
+    setPreview(f ? URL.createObjectURL(f) : null);
   };
 
+  // --- validate required
+  const validate = () => {
+    if (!gender) return "Το *Φύλο* είναι υποχρεωτικό.";
+    if (!age) return "Το *Ηλικιακό γκρουπ* είναι υποχρεωτικό.";
+    if (!file) return "Ανέβασε φωτογραφία του φλιτζανιού.";
+    return null;
+    // (Mood/Topics/Question είναι προαιρετικά)
+  };
+
+  // --- main action
   const start = async () => {
+    setErr(null);
+
+    // 1) required fields
+    const v = validate();
+    if (v) return setErr(v);
+
+    // 2) check auth
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) {
+      // αποθήκευση φόρμας & redirect
+      const toStore: PersistedForm = { persona, gender, age, mood, topics, question };
+      localStorage.setItem("cupForm", JSON.stringify(toStore));
+      localStorage.setItem("returnTo", "/cup");
+      return nav("/auth");
+    }
+
+    // 3) upload + insert
     try {
-      setErr(null);
-
-      // 1) Έλεγχος login
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) {
-        localStorage.setItem("returnTo", "/cup");
-        return nav("/auth");
-      }
-
-      // 2) Έλεγχος αρχείου
-      if (!file) return setErr("Διάλεξε φωτογραφία του φλιτζανιού.");
-      if (!file.type.startsWith("image/")) return setErr("Μόνο εικόνες.");
-      if (file.size > 5 * 1024 * 1024) return setErr("Μέγιστο μέγεθος 5MB.");
-
       setBusy(true);
 
-      // 3) Upload στο Supabase Storage (bucket: cups)
-      const safeName = file.name.replace(/\s+/g, "_");
+      const safeName = file!.name.replace(/\s+/g, "_");
       const path = `${auth.user.id}/${Date.now()}_${safeName}`;
-      const up = await supabase.storage.from("cups").upload(path, file, { upsert: false });
+      const up = await supabase.storage.from("cups").upload(path, file!, { upsert: false });
       if (up.error) throw up.error;
-
       const imageUrl = supabase.storage.from("cups").getPublicUrl(path).data.publicUrl;
 
-      // 4) Δημιουργία reading (χρησιμοποιούμε στήλες: user_id, image_url, text)
-      const seedText =
-        `Περσόνα: ${personaObj.name} | Κατάσταση: ${mood} | Θέματα: ${topics.join(", ") || "—"}` +
-        `\nΗ ανάλυση ετοιμάζεται…`;
+      const meta =
+        `Περσόνα: ${personaObj.name}\n` +
+        `Φύλο: ${gender}\nΗλικιακό γκρουπ: ${age}\n` +
+        `Κατάσταση: ${mood}\n` +
+        `Θέματα: ${topics.join(", ") || "—"}\n` +
+        `Ερώτηση: ${question || "—"}`;
 
-      const ins = await supabase
+      const { data, error } = await supabase
         .from("readings")
         .insert({
           user_id: auth.user.id,
           image_url: imageUrl,
-          text: seedText, // κρατάμε βασικά meta μέσα στο text για να μην σπάσουμε schema
+          text: `${meta}\n\nΗ ανάλυση ετοιμάζεται…`,
         })
         .select("id")
         .single();
 
-      if (ins.error || !ins.data) throw ins.error || new Error("Insert failed");
-      const readingId = ins.data.id as string;
-
-      // 5) Redirect στη λεπτομέρεια
-      nav(`/reading/${readingId}`);
+      if (error || !data) throw error || new Error("Insert failed");
+      nav(`/reading/${data.id}`);
     } catch (e: any) {
       console.error(e);
       setErr(e.message || "Κάτι πήγε στραβά.");
@@ -108,22 +173,20 @@ export default function Cup() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       {/* HERO */}
-      <header className="flex flex-col md:flex-row gap-8 items-center">
-        <div className="flex-1">
-          <h1 className="text-3xl md:text-5xl font-bold leading-tight">
-            Ξεκλείδωσε την Αρχαία Τέχνη της Καφεμαντείας
-          </h1>
-          <p className="mt-3 text-lg opacity-80">
-            Το πεπρωμένο σου σε περιμένει στο φλιτζάνι σου. Με την βοήθεια της Τεχνητής Νοημοσύνης,
-            οι συμβολισμοί αποκτούν φωνή — εξατομικευμένα, ζεστά και ουσιαστικά.
-          </p>
-        </div>
+      <header className="mb-8">
+        <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+          Ξεκλείδωσε την Αρχαία Τέχνη της Καφεμαντείας
+        </h1>
+        <p className="mt-3 text-lg opacity-80 max-w-3xl">
+          Το πεπρωμένο σου σε περιμένει στο φλιτζάνι σου. Με την βοήθεια της Τεχνητής Νοημοσύνης,
+          οι συμβολισμοί αποκτούν φωνή — εξατομικευμένα, ζεστά και ουσιαστικά.
+        </p>
       </header>
 
       {/* PERSONAS */}
-      <section className="mt-10">
+      <section>
         <h2 className="text-xl font-semibold mb-4">Διάλεξε Καφετζού</h2>
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-5">
+        <div className="grid md:grid-cols-3 gap-5">
           {PERSONAS.map((p) => {
             const active = persona === p.id;
             return (
@@ -139,7 +202,7 @@ export default function Cup() {
                   <img
                     src={p.img}
                     alt={p.name}
-                    className="w-full aspect-square object-cover"
+                    className="w-full aspect-[16/12] object-cover"
                     loading="lazy"
                   />
                 </div>
@@ -156,7 +219,48 @@ export default function Cup() {
         </div>
       </section>
 
-      {/* MOOD */}
+      {/* Required fields */}
+      <section className="mt-10 grid md:grid-cols-2 gap-6">
+        <div>
+          <h2 className="text-xl font-semibold mb-3">
+            Φύλο <span className="text-red-600">*</span>
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {GENDERS.map((g) => (
+              <button
+                key={g}
+                onClick={() => setGender(g)}
+                className={`px-3 py-2 rounded-full border ${
+                  gender === g ? "bg-black text-white" : "bg-white hover:bg-gray-50"
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-xl font-semibold mb-3">
+            Ηλικιακό γκρουπ <span className="text-red-600">*</span>
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {AGE_GROUPS.map((a) => (
+              <button
+                key={a}
+                onClick={() => setAge(a)}
+                className={`px-3 py-2 rounded-full border ${
+                  age === a ? "bg-black text-white" : "bg-white hover:bg-gray-50"
+                }`}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Mood */}
       <section className="mt-10">
         <h2 className="text-xl font-semibold mb-3">Κατάσταση</h2>
         <div className="flex flex-wrap gap-2">
@@ -174,7 +278,7 @@ export default function Cup() {
         </div>
       </section>
 
-      {/* TOPICS */}
+      {/* Topics */}
       <section className="mt-10">
         <h2 className="text-xl font-semibold mb-3">Θέματα που σε ενδιαφέρουν</h2>
         <div className="flex flex-wrap gap-2">
@@ -195,24 +299,56 @@ export default function Cup() {
         </div>
       </section>
 
-      {/* UPLOAD + ACTION */}
+      {/* Personalized Question */}
       <section className="mt-10">
-        <h2 className="text-xl font-semibold mb-3">Ανέβασε το Φλιτζάνι σου</h2>
-        <div className="flex flex-col md:flex-row items-start gap-4">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
-          <button
-            onClick={start}
-            disabled={busy || !file}
-            className="rounded-xl px-5 py-3 bg-black text-white hover:opacity-90 transition disabled:opacity-40"
-          >
-            {busy ? "Ανάλυση…" : "Ξεκίνα Ανάλυση Τώρα"}
-          </button>
+        <h2 className="text-xl font-semibold mb-3">Προσωποποιημένη ερώτηση (προαιρετικό)</h2>
+        <input
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Γράψε την ερώτησή σου…"
+          className="w-full rounded-xl border px-3 py-2"
+          maxLength={240}
+        />
+        <div className="text-xs opacity-60 mt-1">{question.length}/240</div>
+      </section>
+
+      {/* Upload + CTA */}
+      <section className="mt-10">
+        <h2 className="text-xl font-semibold mb-3">
+          Ανέβασε το Φλιτζάνι σου <span className="text-red-600">*</span>
+        </h2>
+
+        <div className="grid md:grid-cols-[280px_1fr] gap-6 items-start">
+          {/* preview frame */}
+          <div className="rounded-2xl border bg-white overflow-hidden w-[280px] h-[280px] flex items-center justify-center">
+            {preview ? (
+              <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+            ) : (
+              <div className="text-sm opacity-60 p-4 text-center">
+                Καμία εικόνα<br />Επίλεξε ένα αρχείο για προεπισκόπηση
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => onFile(e.target.files?.[0] || null)}
+            />
+            <button
+              onClick={start}
+              disabled={busy}
+              className="rounded-xl px-5 py-3 bg-black text-white hover:opacity-90 transition disabled:opacity-40 w-fit"
+            >
+              {busy ? "Ανάλυση…" : "Ανάλυση τώρα"}
+            </button>
+            {err && <p className="text-red-600 text-sm">{err}</p>}
+            <p className="text-xs opacity-60">
+              * Απαραίτητα πεδία: Φύλο, Ηλικιακό γκρουπ, Εικόνα φλιτζανιού
+            </p>
+          </div>
         </div>
-        {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
       </section>
     </div>
   );
