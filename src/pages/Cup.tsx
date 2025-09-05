@@ -190,7 +190,6 @@ export default function Cup() {
                 }`}
                 title={`Επιλογή: ${p.name}`}
               >
-                {/* Wrapper με σταθερό aspect ratio 4:3 */}
                 <div className="w-full" style={{ aspectRatio: "4 / 3" }}>
                   <img
                     src={p.img}
@@ -199,7 +198,6 @@ export default function Cup() {
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).src = "/placeholder.svg";
                     }}
-                    referrerPolicy="no-referrer"
                     loading="eager"
                   />
                 </div>
