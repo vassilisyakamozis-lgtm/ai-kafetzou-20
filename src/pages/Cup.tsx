@@ -15,7 +15,7 @@ const PERSONAS: { id: PersonaId; name: string; desc: string; img: string }[] = [
     id: "young",
     name: "Κατίνα η Σμυρνιά",
     desc: "από τη Σμύρνη με αγάπη και παράδοση",
-    img: "/assets/kafetzou-young.png",
+    img: "/lovable-uploads/1d90fc5d-c54a-4030-9ad6-6c6fd5769199.png",
   },
   {
     id: "mystic",
