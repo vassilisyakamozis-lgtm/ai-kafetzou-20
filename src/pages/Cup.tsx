@@ -25,15 +25,12 @@ const PERSONAS: { id: PersonaId; name: string; desc: string; img: string }[] = [
   },
 ];
 
-// 2.1 Φύλο (required)
 const GENDERS = ["Άνδρας", "Γυναίκα", "Άλλο"] as const;
 type Gender = (typeof GENDERS)[number];
 
-// 2.2 Ηλικιακά group (required)
 const AGE_GROUPS = ["17-24", "25-34", "35-44", "45-54", "55-64", "65+"] as const;
 type AgeGroup = (typeof AGE_GROUPS)[number];
 
-// 2.3 Κατάσταση (εμπλουτισμένη)
 const MOODS = [
   "Ουδέτερο",
   "Χαρούμενο",
@@ -46,8 +43,16 @@ const MOODS = [
 ] as const;
 type Mood = (typeof MOODS)[number];
 
-// 2.4 Θέματα
-const TOPICS = ["Έρωτας", "Τύχη", "Καριέρα", "Οικογένεια", "Υγεία", "Χρήματα", "Ταξίδια", "Φίλοι"] as const;
+const TOPICS = [
+  "Έρωτας",
+  "Τύχη",
+  "Καριέρα",
+  "Οικογένεια",
+  "Υγεία",
+  "Χρήματα",
+  "Ταξίδια",
+  "Φίλοι",
+] as const;
 type Topic = (typeof TOPICS)[number];
 
 type PersistedForm = {
@@ -62,7 +67,6 @@ type PersistedForm = {
 export default function Cup() {
   const nav = useNavigate();
 
-  // --- state
   const [persona, setPersona] = useState<PersonaId>("classic");
   const [gender, setGender] = useState<Gender | "">("");
   const [age, setAge] = useState<AgeGroup | "">("");
@@ -75,7 +79,6 @@ export default function Cup() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // --- restore pending form (αν γύρισες από /auth)
   useEffect(() => {
     const raw = localStorage.getItem("cupForm");
     if (raw) {
@@ -92,7 +95,6 @@ export default function Cup() {
     }
   }, []);
 
-  // --- derived
   const personaObj = useMemo(
     () => PERSONAS.find((p) => p.id === persona)!,
     [persona]
@@ -106,37 +108,28 @@ export default function Cup() {
     setPreview(f ? URL.createObjectURL(f) : null);
   };
 
-  // --- validate required
   const validate = () => {
     if (!gender) return "Το *Φύλο* είναι υποχρεωτικό.";
     if (!age) return "Το *Ηλικιακό γκρουπ* είναι υποχρεωτικό.";
     if (!file) return "Ανέβασε φωτογραφία του φλιτζανιού.";
     return null;
-    // (Mood/Topics/Question είναι προαιρετικά)
   };
 
-  // --- main action
   const start = async () => {
     setErr(null);
-
-    // 1) required fields
     const v = validate();
     if (v) return setErr(v);
 
-    // 2) check auth
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) {
-      // αποθήκευση φόρμας & redirect
       const toStore: PersistedForm = { persona, gender, age, mood, topics, question };
       localStorage.setItem("cupForm", JSON.stringify(toStore));
       localStorage.setItem("returnTo", "/cup");
       return nav("/auth");
     }
 
-    // 3) upload + insert
     try {
       setBusy(true);
-
       const safeName = file!.name.replace(/\s+/g, "_");
       const path = `${auth.user.id}/${Date.now()}_${safeName}`;
       const up = await supabase.storage.from("cups").upload(path, file!, { upsert: false });
@@ -172,7 +165,6 @@ export default function Cup() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
-      {/* HERO */}
       <header className="mb-8">
         <h1 className="text-4xl md:text-5xl font-bold leading-tight">
           Ξεκλείδωσε την Αρχαία Τέχνη της Καφεμαντείας
@@ -198,12 +190,17 @@ export default function Cup() {
                 }`}
                 title={`Επιλογή: ${p.name}`}
               >
-                <div className="bg-gray-50">
+                {/* Wrapper με σταθερό aspect ratio 4:3 */}
+                <div className="w-full" style={{ aspectRatio: "4 / 3" }}>
                   <img
                     src={p.img}
                     alt={p.name}
-                    className="w-full aspect-[16/12] object-cover"
-                    loading="lazy"
+                    className="w-full h-full object-cover block"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = "/placeholder.svg";
+                    }}
+                    referrerPolicy="no-referrer"
+                    loading="eager"
                   />
                 </div>
                 <div className="p-4">
@@ -319,7 +316,6 @@ export default function Cup() {
         </h2>
 
         <div className="grid md:grid-cols-[280px_1fr] gap-6 items-start">
-          {/* preview frame */}
           <div className="rounded-2xl border bg-white overflow-hidden w-[280px] h-[280px] flex items-center justify-center">
             {preview ? (
               <img src={preview} alt="Preview" className="w-full h-full object-cover" />
