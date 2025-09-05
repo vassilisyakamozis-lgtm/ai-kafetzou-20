@@ -7,21 +7,21 @@ type PersonaId = "classic" | "young" | "mystic";
 const PERSONAS: { id: PersonaId; name: string; desc: string; img: string }[] = [
   {
     id: "classic",
-    name: "Κλασική Καφετζού",
-    desc: "παραδοσιακό, ζεστό ύφος",
-    img: "/assets/kafetzou-classic.png",
+    name: "Μαίρη, η 'ψαγμένη'",
+    desc: "έμπειρη καφετζού με βαθιά γνώση και παράδοση",
+    img: "/lovable-uploads/fb2ced7f-3a10-44ac-b0e6-3a29551a5e3f.png",
   },
   {
     id: "young",
-    name: "Κατίνα η Σμυρνιά",
-    desc: "από τη Σμύρνη με αγάπη και παράδοση",
-    img: "/lovable-uploads/1d90fc5d-c54a-4030-9ad6-6c6fd5769199.png",
+    name: "Ρένα, η μοντέρνα",
+    desc: "σύγχρονη προσέγγιση με νεανικό πνεύμα",
+    img: "/lovable-uploads/745cf168-0332-4afd-b558-fc54db9eef18.png",
   },
   {
     id: "mystic",
-    name: "Ισιδώρα η Πνευματική",
-    desc: "συνδέει τον κόσμο με το πνεύμα",
-    img: "/assets/kafetzou-mystic.png",
+    name: "Ισιδώρα, η πνευματική", 
+    desc: "συνδέει τον κόσμο με το πνεύμα και τη σοφία",
+    img: "/lovable-uploads/ac472d31-2787-4950-9fa2-8fe551005e5d.png",
   },
 ];
 
