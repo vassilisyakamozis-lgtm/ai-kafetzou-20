@@ -48,8 +48,7 @@ export default function Auth() {
       setBusy(true);
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
-      // Αν έχει ρυθμιστεί email confirmation, ο χρήστης θα το δει.
-      done();
+      done(); // ή άφησέ τον στη σελίδα αν θέλεις email confirmation
     } catch (e: any) {
       setErr(e.message || "Αποτυχία εγγραφής");
     } finally {
@@ -61,12 +60,10 @@ export default function Auth() {
     try {
       setErr(null);
       setBusy(true);
-      // ⚠️ Άνοιξε την εφαρμογή σε NEW TAB / published domain (όχι iframe), αλλιώς Google θα κόψει το popup.
+      // ⚠️ Άνοιξε το site σε NEW TAB / published domain (όχι iframe), αλλιώς Google κόβει το popup.
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: window.location.origin + "/auth/callback",
-        },
+        options: { redirectTo: window.location.origin + "/auth/callback" },
       });
       if (error) throw error;
     } catch (e: any) {
