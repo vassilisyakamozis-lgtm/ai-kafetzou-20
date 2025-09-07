@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { supabase } from "@/system/auth";
-import { useAuth } from "@/system/auth";
+import { supabase } from "../system/auth";
+import { useAuth } from "../system/auth";
+
 
 type Reading = {
   id: string;
