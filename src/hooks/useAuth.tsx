@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,21 +41,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
-      // Cast σε any για να παρακάμψουμε τα generated types που δεν έχουν (ακόμα) profiles/user_roles
-      const { data: profileData } = await (supabase as any)
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle();
+        .single();
 
-      const { data: roleData } = await (supabase as any)
+      const { data: roleData } = await supabase
         .from('user_roles')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle();
+        .single();
 
-      setProfile((profileData as Profile) || null);
-      setUserRole((roleData as UserRole) || null);
+      setProfile(profileData || null);
+      setUserRole(roleData || null);
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -75,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         

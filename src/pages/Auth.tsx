@@ -1,142 +1,298 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 export default function Auth() {
-  const nav = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const [tab, setTab] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  // Αν υπάρχει ήδη session, γύρνα στο returnTo ή /
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        const ret = localStorage.getItem("returnTo") || "/";
-        localStorage.removeItem("returnTo");
-        nav(ret, { replace: true });
+    // Check if user is already logged in
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        navigate('/');
+      }
+    };
+    checkUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth event:', event, 'Session:', session);
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('User signed in successfully');
+        toast({
+          title: "Επιτυχής σύνδεση!",
+          description: "Καλώς ήρθατε!",
+        });
+        navigate('/');
       }
     });
-  }, [nav]);
 
-  const done = () => {
-    const ret = localStorage.getItem("returnTo") || "/";
-    localStorage.removeItem("returnTo");
-    nav(ret, { replace: true });
-  };
+    return () => subscription.unsubscribe();
+  }, [navigate, toast]);
 
-  const signIn = async () => {
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
     try {
-      setErr(null);
-      setBusy(true);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      done();
-    } catch (e: any) {
-      setErr(e.message || "Αποτυχία σύνδεσης");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const signUp = async () => {
-    try {
-      setErr(null);
-      setBusy(true);
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
-      done(); // ή άφησέ τον στη σελίδα αν θέλεις email confirmation
-    } catch (e: any) {
-      setErr(e.message || "Αποτυχία εγγραφής");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const google = async () => {
-    try {
-      setErr(null);
-      setBusy(true);
-      // ⚠️ Άνοιξε το site σε NEW TAB / published domain (όχι iframe), αλλιώς Google κόβει το popup.
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: window.location.origin + "/auth/callback" },
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            username,
+            display_name: displayName,
+          }
+        }
       });
+
       if (error) throw error;
-    } catch (e: any) {
-      setErr(e.message || "Αποτυχία Google OAuth");
-      setBusy(false);
+
+      toast({
+        title: "Επιτυχής εγγραφή!",
+        description: "Ελέγξτε το email σας για επιβεβαίωση.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Σφάλμα εγγραφής",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Επιτυχής σύνδεση!",
+        description: "Καλώς ήρθατε πίσω!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Σφάλμα σύνδεσης",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      console.log('Auth: Starting Google OAuth with redirect...');
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        }
+      });
+
+      if (error) {
+        console.error('OAuth error:', error);
+        throw error;
+      }
+
+      // The redirect will happen automatically
+      console.log('Auth: Redirecting to Google...');
+    } catch (error: any) {
+      console.error('Google sign-in error:', error);
+      setLoading(false);
+      toast({
+        title: "Σφάλμα Google σύνδεσης",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
-      <h1 className="text-2xl font-semibold mb-6 text-center">Καφετζούδικο</h1>
-
-      <div className="flex gap-2 justify-center mb-6">
-        <button
-          onClick={() => setTab("signin")}
-          className={`px-4 py-2 rounded-lg border ${tab === "signin" ? "bg-black text-white" : ""}`}
-        >
-          Σύνδεση
-        </button>
-        <button
-          onClick={() => setTab("signup")}
-          className={`px-4 py-2 rounded-lg border ${tab === "signup" ? "bg-black text-white" : ""}`}
-        >
-          Εγγραφή
-        </button>
-      </div>
-
-      <label className="block text-sm mb-1">Email</label>
-      <input
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="w-full border rounded-lg px-3 py-2 mb-3"
-        placeholder="you@email.com"
-      />
-      <label className="block text-sm mb-1">Κωδικός</label>
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className="w-full border rounded-lg px-3 py-2 mb-4"
-        placeholder="••••••••"
-      />
-
-      {err && <p className="text-red-600 text-sm mb-3">{err}</p>}
-
-      <div className="flex gap-2">
-        {tab === "signin" ? (
-          <button
-            onClick={signIn}
-            disabled={busy}
-            className="flex-1 rounded-lg px-4 py-2 bg-black text-white disabled:opacity-40"
-          >
-            Σύνδεση
-          </button>
-        ) : (
-          <button
-            onClick={signUp}
-            disabled={busy}
-            className="flex-1 rounded-lg px-4 py-2 bg-black text-white disabled:opacity-40"
-          >
-            Εγγραφή
-          </button>
-        )}
-
-        <button
-          type="button"
-          onClick={google}
-          disabled={busy}
-          className="flex-1 rounded-lg px-4 py-2 border hover:bg-gray-50 disabled:opacity-40"
-        >
-          Συνέχεια με Google
-        </button>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/20 via-background to-secondary/20 px-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            Καφετζούδικο
+          </CardTitle>
+          <CardDescription>
+            Εισάγετε τα στοιχεία σας για να συνεχίσετε
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="signin" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Σύνδεση</TabsTrigger>
+              <TabsTrigger value="signup">Εγγραφή</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="signin" className="space-y-4">
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-email">Email</Label>
+                  <Input
+                    id="signin-email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signin-password">Κωδικός</Label>
+                  <Input
+                    id="signin-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Σύνδεση...
+                    </>
+                  ) : (
+                    'Σύνδεση'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+            
+            <TabsContent value="signup" className="space-y-4">
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-username">Username</Label>
+                  <Input
+                    id="signup-username"
+                    type="text"
+                    placeholder="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-displayname">Όνομα εμφάνισης</Label>
+                  <Input
+                    id="signup-displayname"
+                    type="text"
+                    placeholder="Το όνομά σας"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Κωδικός</Label>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Εγγραφή...
+                    </>
+                  ) : (
+                    'Εγγραφή'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+          
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Ή</span>
+              </div>
+            </div>
+            
+            <Button
+              variant="outline"
+              className="w-full mt-4"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+                  <path
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    fill="#EA4335"
+                  />
+                </svg>
+              )}
+              Συνέχεια με Google
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

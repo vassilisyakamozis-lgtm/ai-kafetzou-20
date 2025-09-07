@@ -1,56 +1,36 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Index from "./pages/Index";
+import Cup from "./pages/Cup";
+import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
+import NotFound from "./pages/NotFound";
+import { AuthProvider } from "./hooks/useAuth";
 
-import Header from "@/components/Header";
-import ProtectedRoute from "@/components/ProtectedRoute";
+const queryClient = new QueryClient();
 
-import Home from "@/pages/Home";
-import Cup from "@/pages/Cup";
-import MyReadings from "@/pages/MyReadings";
-import ReadingStartPage from "@/pages/reading/Start";
-import ReadingDetail from "@/pages/reading/Detail";
-import Auth from "@/pages/Auth";
-import AuthCallback from "@/pages/auth/callback";
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/cup" element={<Cup />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
-export default function App() {
-  return (
-    <>
-      <Header />
-      <Routes>
-        {/* Ανοιχτές σελίδες */}
-        <Route path="/" element={<Home />} />
-        <Route path="/cup" element={<Cup />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-
-        {/* Προστατευμένες σελίδες */}
-        <Route
-          path="/my-readings"
-          element={
-            <ProtectedRoute>
-              <MyReadings />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reading/start"
-          element={
-            <ProtectedRoute>
-              <ReadingStartPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reading/:id"
-          element={
-            <ProtectedRoute>
-              <ReadingDetail />
-            </ProtectedRoute>
-          }
-        />
-
-        
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </>
-  );
-}
+export default App;
