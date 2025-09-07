@@ -1,11 +1,11 @@
 import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import { ProtectedRoute } from "@/system/ProtectedRoute";
+import { ProtectedRoute } from "./system/ProtectedRoute";
+const Home = lazy(() => import("./pages/Index"));
+const AuthPage = lazy(() => import("./pages/Auth"));
+const NewReading = lazy(() => import("./pages/NewReading"));
+const ReadingResult = lazy(() => import("./pages/CupReadingResult"));
 
-const Home = lazy(() => import("@/pages/Home"));
-const AuthPage = lazy(() => import("@/pages/Auth"));
-const NewReading = lazy(() => import("@/pages/NewReading"));
-const ReadingResult = lazy(() => import("@/pages/CupReadingResult"));
 
 const withFB = (el: JSX.Element) => <Suspense fallback={<div />}>{el}</Suspense>;
 
