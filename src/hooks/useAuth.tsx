@@ -13,7 +13,7 @@ type AuthCtx = {
   signOut: () => Promise<{ error: Error | null }>;
 };
 
-// ---- Singleton Context via globalThis (αν υπάρξει διπλό import, μοιράζονται τον ΙΔΙΟ context)
+// ---- Singleton Context (μοιράζεται ακόμα κι αν γίνει διπλό import με διαφορετικό path)
 const AUTH_CTX_KEY = "__AIKAF_AUTH_CTX__";
 const existing = (globalThis as any)[AUTH_CTX_KEY] as React.Context<AuthCtx | undefined> | undefined;
 const AuthContext =
@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   );
 };
 
-/** ΠΟΤΕ δεν κάνει throw. Αν λείπει Provider, γυρίζει ασφαλή defaults + warning. */
+/** Ασφαλές hook: ποτέ throw. Αν λείπει Provider, γυρνά defaults + warning (για να μην κρασάρει η app). */
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) {
