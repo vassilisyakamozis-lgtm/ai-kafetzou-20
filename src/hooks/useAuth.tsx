@@ -1,3 +1,4 @@
+// src/hooks/useAuth.tsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +11,11 @@ type AuthCtx = {
   signOut: () => Promise<{ error: Error | null }>;
 };
 
-const AuthContext = createContext<AuthCtx | undefined>(undefined);
+// ---- Singleton Context via globalThis (αποφεύγει διπλά modules/paths)
+const AUTH_CTX_KEY = "__AIKAF_AUTH_CTX__";
+const existing = (globalThis as any)[AUTH_CTX_KEY] as React.Context<AuthCtx | undefined> | undefined;
+const AuthContext =
+  existing ?? ((globalThis as any)[AUTH_CTX_KEY] = createContext<AuthCtx | undefined>(undefined));
 
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -40,12 +45,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   const signInWithOtp = async (email: string) => {
     const { error } = await supabase.auth.signInWithOtp({ email });
-    return { error: error as unknown as Error | null };
+    return { error: (error as unknown as Error) ?? null };
   };
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
-    return { error: error as unknown as Error | null };
+    return { error: (error as unknown as Error) ?? null };
   };
 
   return (
@@ -55,8 +60,21 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   );
 };
 
+/**
+ * Ασφαλές hook: δεν ρίχνει exception αν (κατά λάθος) κληθεί εκτός Provider.
+ * Γυρνάει defaults και log-άρει προειδοποίηση ώστε να ΜΗΝ κρασάρει η σελίδα.
+ */
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
+  if (!ctx) {
+    console.warn("useAuth called outside AuthProvider — using safe defaults");
+    return {
+      user: null,
+      session: null,
+      loading: false,
+      signInWithOtp: async () => ({ error: new Error("No AuthProvider") }),
+      signOut: async () => ({ error: null }),
+    } as const;
+  }
   return ctx;
 };
