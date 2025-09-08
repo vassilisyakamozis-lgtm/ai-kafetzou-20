@@ -1,34 +1,39 @@
-import { useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import React from "react";
 import { useNavigate } from "react-router-dom";
-import Header from "@/components/Header";
-import HeroSection from "@/components/HeroSection";
-import FeaturesSection from "@/components/FeaturesSection";
-import ReadersSection from "@/components/ReadersSection";
-import PricingSection from "@/components/PricingSection";
-import Footer from "@/components/Footer";
+import { useAuth } from "@/hooks/useAuth";
 
-const Index = () => {
-  const { loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+const IndexPage: React.FC = () => {
+  const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  if (loading) return null; // ή spinner
+
+  const go = () => {
+    if (!user) navigate("/auth");
+    else navigate("/cup"); // βάλε εδώ τη σελίδα ανάγνωσης
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <HeroSection />
-      <FeaturesSection />
-      <ReadersSection />
-      <PricingSection />
-      <Footer />
+    <div style={{ maxWidth: 720, margin: "40px auto", padding: 24 }}>
+      <h1>AI Καφετζού</h1>
+      <p>{user ? `Συνδεδεμένος: ${user.email}` : "Δεν είσαι συνδεδεμένος."}</p>
+      <div style={{ display: "flex", gap: 12 }}>
+        <button onClick={go} style={{ padding: 10, fontSize: 16 }}>
+          Ξεκίνα την ανάγνωση
+        </button>
+        {user && (
+          <button onClick={() => signOut()} style={{ padding: 10, fontSize: 16 }}>
+            Αποσύνδεση
+          </button>
+        )}
+        {!user && (
+          <button onClick={() => navigate("/auth")} style={{ padding: 10, fontSize: 16 }}>
+            Εγγραφή / Σύνδεση
+          </button>
+        )}
+      </div>
     </div>
   );
 };
 
-export default Index;
+export default IndexPage;

@@ -1,20 +1,48 @@
-import { supabase } from "../lib/supabase";
+import React, { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
-export default function AuthPage() {
-  async function sendMagicLink() {
-    const email = prompt("Email για magic link:");
-    if (!email) return;
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
-    if (error) alert(error.message);
-    else alert("Στείλαμε link στο email σου.");
-  }
+const AuthPage: React.FC = () => {
+  const { signInWithOtp } = useAuth();
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [msg, setMsg] = useState("");
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("sending");
+    setMsg("");
+    const { error } = await signInWithOtp(email.trim());
+    if (error) {
+      setStatus("error");
+      setMsg(error.message || "Κάτι πήγε στραβά");
+      return;
+    }
+    setStatus("sent");
+    setMsg("Σου στείλαμε magic link. Έλεγξε το email σου.");
+  };
+
   return (
-    <div className="max-w-md mx-auto p-6 text-center">
-      <h1 className="text-2xl font-bold mb-2">Εγγραφή / Σύνδεση</h1>
-      <p className="opacity-70 mb-4">Χρησιμοποίησε magic link ή provider.</p>
-      <button onClick={sendMagicLink} className="px-4 py-2 rounded bg-black text-white">
-        Magic link στο email
-      </button>
+    <div style={{ maxWidth: 420, margin: "40px auto", padding: 24 }}>
+      <h1>Εγγραφή / Σύνδεση</h1>
+      <p>Χρησιμοποίησε magic link στο email σου.</p>
+
+      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
+        <input
+          type="email"
+          required
+          placeholder="name@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={{ padding: 10, fontSize: 16 }}
+        />
+        <button disabled={status === "sending"} style={{ padding: 10, fontSize: 16 }}>
+          {status === "sending" ? "Αποστέλλεται…" : "Magic link στο email"}
+        </button>
+      </form>
+
+      {msg && <p style={{ marginTop: 12 }}>{msg}</p>}
     </div>
   );
-}
+};
+
+export default AuthPage;
