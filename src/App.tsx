@@ -7,7 +7,7 @@ import CupPage from "@/pages/Cup";
 
 const PrivateRoute: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return null; // ή spinner
+  if (loading) return null;
   return user ? <>{children}</> : <Navigate to="/auth" replace />;
 };
 
