@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-console.log("[SAFE_AUTH_HOOK_ACTIVE] useAuth.tsx loaded"); // <-- ΣΗΜΑ
+console.log("[SAFE_AUTH_HOOK_ACTIVE] useAuth.tsx loaded");
 
 type AuthCtx = {
   user: User | null;
@@ -13,7 +13,7 @@ type AuthCtx = {
   signOut: () => Promise<{ error: Error | null }>;
 };
 
-// ---- Singleton Context via globalThis (για να μην δημιουργούνται ΔΥΟ διαφορετικά contexts)
+// ---- Singleton Context via globalThis (αν υπάρξει διπλό import, μοιράζονται τον ΙΔΙΟ context)
 const AUTH_CTX_KEY = "__AIKAF_AUTH_CTX__";
 const existing = (globalThis as any)[AUTH_CTX_KEY] as React.Context<AuthCtx | undefined> | undefined;
 const AuthContext =
@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   );
 };
 
-/** ΠΟΤΕ δεν πετάει exception — αν λείπει Provider, επιστρέφει ασφαλή defaults και warning. */
+/** ΠΟΤΕ δεν κάνει throw. Αν λείπει Provider, γυρίζει ασφαλή defaults + warning. */
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) {
