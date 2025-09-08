@@ -3,6 +3,8 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
+console.log("[SAFE_AUTH_HOOK_ACTIVE] useAuth.tsx loaded"); // <-- ΣΗΜΑ
+
 type AuthCtx = {
   user: User | null;
   session: Session | null;
@@ -11,7 +13,7 @@ type AuthCtx = {
   signOut: () => Promise<{ error: Error | null }>;
 };
 
-// ---- Singleton Context via globalThis (αποφεύγει διπλά modules/paths)
+// ---- Singleton Context via globalThis (για να μην δημιουργούνται ΔΥΟ διαφορετικά contexts)
 const AUTH_CTX_KEY = "__AIKAF_AUTH_CTX__";
 const existing = (globalThis as any)[AUTH_CTX_KEY] as React.Context<AuthCtx | undefined> | undefined;
 const AuthContext =
@@ -23,6 +25,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("[AuthProvider] mounted");
     let mounted = true;
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -60,10 +63,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   );
 };
 
-/**
- * Ασφαλές hook: δεν ρίχνει exception αν (κατά λάθος) κληθεί εκτός Provider.
- * Γυρνάει defaults και log-άρει προειδοποίηση ώστε να ΜΗΝ κρασάρει η σελίδα.
- */
+/** ΠΟΤΕ δεν πετάει exception — αν λείπει Provider, επιστρέφει ασφαλή defaults και warning. */
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) {
