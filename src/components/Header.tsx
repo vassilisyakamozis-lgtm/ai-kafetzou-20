@@ -3,13 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 const Header: React.FC = () => {
-  const { user, loading, signOut, profile } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
 
-  const name =
-    (profile && (profile.full_name || profile.name)) ||
-    user?.email ||
-    "Επισκέπτης";
+  const name = user?.email || "Επισκέπτης";
 
   return (
     <header
