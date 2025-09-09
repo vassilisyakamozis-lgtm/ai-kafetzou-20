@@ -1,3 +1,4 @@
+// src/pages/reading/Start.tsx
 'use client';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -14,12 +15,15 @@ export default function ReadingStartPage() {
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) {
         localStorage.setItem('returnTo', '/reading/start');
-        navigate('/auth', { replace: true });
+        supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: `${window.location.origin}/reading/start` },
+        });
       } else {
         setReady(true);
       }
     });
-  }, [navigate]);
+  }, []);
 
   const run = async () => {
     setErr(null);
@@ -31,28 +35,33 @@ export default function ReadingStartPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setBusy(false); return setErr('Απαιτείται σύνδεση.'); }
 
+    // 1) Upload
     const path = `${user.id}/${Date.now()}_${file.name}`;
-    const up = await supabase.storage.from('cups').upload(path, file);
+    const up = await supabase.storage.from('cups').upload(path, file, { upsert: false });
     if (up.error) { setBusy(false); return setErr(up.error.message); }
 
+    // 2) Public URL (για demo oracle)
     const imageUrl = supabase.storage.from('cups').getPublicUrl(path).data.publicUrl;
 
-    // Προκαταχώρηση reading
+    // 3) Insert reading
     const ins = await supabase.from('readings').insert({
       user_id: user.id,
-      image_url: imageUrl,
-      text: 'Δημιουργία χρησμού…'
-    }).select('id').single();
+      image_path: path,
+      oracle_text: 'Δημιουργία χρησμού…',
+    }).select('*').single();
 
     if (ins.error || !ins.data) { setBusy(false); return setErr(ins.error?.message || 'Insert failed'); }
-
     const readingId = ins.data.id as string;
 
-    // DEMO “oracle” – μέχρι να κουμπώσουμε OpenAI
-    const oracle = await createFakeOracle(imageUrl);
-    await supabase.from('readings').update({ text: oracle }).eq('id', readingId);
+    // 4) Demo “oracle” (client-side)
+    const fakeOracle = await createFakeOracle(imageUrl);
+
+    // 5) Update
+    const upd = await supabase.from('readings').update({ oracle_text: fakeOracle }).eq('id', readingId);
+    if (upd.error) { setBusy(false); return setErr(upd.error.message); }
 
     setBusy(false);
+    // 6) Redirect ΜΟΝΟ με React Router
     navigate(`/reading/${readingId}`, { replace: true });
   };
 
@@ -61,15 +70,28 @@ export default function ReadingStartPage() {
   return (
     <main style={{ padding: 16 }}>
       <h1>Νέα Ανάγνωση</h1>
-      <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} disabled={busy} />
-      <button type="button" onClick={run} disabled={busy || !file} style={{ marginLeft: 8 }}>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
+        disabled={busy}
+      />
+      <button
+        type="button"
+        onClick={run}
+        disabled={busy || !file}
+        style={{ marginLeft: 8 }}
+      >
         {busy ? 'Ανάλυση…' : 'Ανάλυση φλιτζανιού'}
       </button>
-      {err && <p style={{ color: 'crimson' }}>{err}</p>}
+      {err && <p style={{ color: 'red' }}>{err}</p>}
+      <p style={{ marginTop: 8, opacity: 0.7 }}>
+        Μετά την ανάλυση θα μεταφερθείς αυτόματα στον χρησμό.
+      </p>
     </main>
   );
 }
 
-async function createFakeOracle(imageUrl: string) {
-  return `Είδα σημάδια ανανέωσης και τύχης.\nΕικόνα: ${imageUrl}`;
+async function createFakeOracle(imageUrl: string): Promise<string> {
+  return `Είδα σημάδια ανανέωσης και τύχης. (demo)\nΕικόνα: ${imageUrl}`;
 }

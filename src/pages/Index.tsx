@@ -1,263 +1,517 @@
-import { useState } from "react";
+// src/pages/Cup.tsx
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
 
-const FORTUNE_TELLERS = [
-  {
-    id: "classic",
-    name: "Κλασική Καφετζού",
-    desc: "παραδοσιακό, ζεστό ύφος",
-    img: "/assets/kafetzou-classic.png",
-  },
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormItem,
+  FormMessage,
+  FormField,
+  FormControl,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+import { Coffee, House, LogOut, LogIn, Sparkles, ImageIcon } from "lucide-react";
+
+type CupForm = {
+  reader: string;
+  category: string;
+  mood: string;
+  question?: string;
+  image: File | null;
+  gender: string;
+  age_range: string;
+};
+
+const readers = [
   {
     id: "young",
-    name: "Νεαρή Καφετζού",
-    desc: "ανάλαφρο, παιχνιδιάρικο ύφος",
-    img: "/assets/kafetzou-young.png",
+    name: "Ρένα η μοντέρνα",
+    description: "Φρέσκες προβλέψεις με νεανική αισιοδοξία",
+    image:
+      "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/modern%20woman.png?v=2",
   },
   {
-    id: "mystic",
-    name: "Μυστική Μάντισσα",
-    desc: "ποιητικό, μυσταγωγικό ύφος",
-    img: "/assets/kafetzou-mystic.png",
+    id: "experienced",
+    name: "Μαίρη η ψαγμένη",
+    description: "Ισορροπημένη οπτική με εμπειρία ζωής",
+    image:
+      "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/katina-klassiki.png?v=2",
   },
-] as const;
+  {
+    id: "wise",
+    name: "Ισιδώρα η πνευματική",
+    description: "Αρχαία σοφία και βαθιές προβλέψεις",
+    image:
+      "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/mystic%20woman.png?v=2",
+  },
+];
 
-type PersonaId = typeof FORTUNE_TELLERS[number]["id"];
+const categories = [
+  "Γενικό Μέλλον",
+  "Αγάπη & Σχέσεις",
+  "Καριέρα & Εργασία",
+  "Υγεία & Ευεξία",
+  "Οικογένεια & Φίλοι",
+  "Χρήματα & Οικονομικά",
+  "Ταξίδια & Περιπέτειες",
+  "Πνευματική Ανάπτυξη",
+];
 
-export default function IndexPage() {
-  const [pickerOpen, setPickerOpen] = useState(true);
-  const [persona, setPersona] = useState<PersonaId>("classic");
-  const [gender, setGender] = useState("male");
-  const [age, setAge] = useState("35-44");
-  const [topic, setTopic] = useState("spiritual");
-  const [question, setQuestion] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+const moods = [
+  "Ζεστή & ενθαρρυντική",
+  "Ισορροπημένη & αντικειμενική",
+  "Πνευματική & βαθιά",
+  "Ανάλαφρη & αισιόδοξη",
+];
 
-  const startReading = () => {
-    console.log({ persona, gender, age, topic, question, file });
-    alert("Η ανάγνωση ξεκινά! Δες console για τα δεδομένα.");
+const genders = ["Γυναίκα", "Άνδρας", "Άλλο/Μη δυαδικό"];
+const ages = ["18-24", "25-34", "35-44", "45-54", "55+"];
+
+export default function Cup() {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [isAuthed, setIsAuthed] = useState(false);
+
+  // Πάρε session για να δείξουμε Σύνδεση/Αποσύνδεση και για το invoke
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data.session?.access_token ?? null;
+      setSessionToken(token);
+      setIsAuthed(Boolean(token));
+    });
+    // live updates όταν αλλάζει το session
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      const token = s?.access_token ?? null;
+      setSessionToken(token);
+      setIsAuthed(Boolean(token));
+    });
+    return () => {
+      sub.subscription?.unsubscribe();
+    };
+  }, []);
+
+  const form = useForm<CupForm>({
+    defaultValues: {
+      reader: "",
+      category: "",
+      mood: "",
+      question: "",
+      image: null,
+      gender: "",
+      age_range: "",
+    },
+  });
+
+  // preview εικόνας
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    form.setValue("image", file);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
+    } else {
+      setImagePreview(null);
+    }
+  };
+
+  // upload εικόνας στο bucket 'uploads' → public URL
+  const uploadCupImage = async (file: File) => {
+    const { data: user } = await supabase.auth.getUser();
+    const uid = user.user?.id ?? "anonymous";
+    const path = `cups/${uid}/${Date.now()}_${file.name}`;
+    const { error } = await supabase.storage
+      .from("uploads")
+      .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+    if (error) throw error;
+    const { data } = supabase.storage.from("uploads").getPublicUrl(path);
+    return data.publicUrl as string;
+  };
+
+  const onSubmit = async (values: CupForm) => {
+    // Αν δεν έχει session → πήγαινε για σύνδεση
+    if (!sessionToken) {
+      toast({
+        title: "Απαιτείται σύνδεση",
+        description: "Συνδέσου για να ξεκινήσεις την ανάγνωση.",
+        variant: "destructive",
+      });
+      // Αν έχεις σελίδα login διαφορετική, άλλαξέ το εδώ
+      navigate("/auth");
+      return;
+    }
+
+    const readerName =
+      readers.find((r) => r.id === values.reader)?.name || "Ρένα η μοντέρνα";
+
+    let image_url: string | null = null;
+    try {
+      if (values.image) {
+        image_url = await uploadCupImage(values.image);
+      }
+    } catch (e: any) {
+      console.warn("Upload image failed:", e?.message ?? e);
+      // δεν σταματάμε—προχωράμε χωρίς image_url
+    }
+
+    try {
+      setIsLoading(true);
+
+      const { data, error } = await supabase.functions.invoke("reading", {
+        body: {
+          reader: readerName,
+          category: values.category,
+          mood: values.mood,
+          question: values.question,
+          image_url,
+          gender: values.gender,
+          age_range: values.age_range,
+        },
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+
+      if (error) throw error;
+
+      if (data?.ok) {
+        toast({
+          title: "Ο χρησμός ετοιμάστηκε!",
+          description: `Ημερομηνία: ${new Date(
+            data.created_at
+          ).toLocaleString("el-GR")}`,
+        });
+
+        // 👉 εδώ κατευθύνεις στη σελίδα αποτελεσμάτων σου
+        // Αν δεν υπάρχει ακόμη, θα προσγειωθείς στο NotFound και θα το δεις στο console (ok).
+        navigate("/reading", { state: data });
+      } else {
+        throw new Error(data?.error ?? "Άγνωστο σφάλμα");
+      }
+    } catch (e: any) {
+      toast({
+        title: "Σφάλμα",
+        description: String(e?.message ?? e),
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast({ title: "Αποσύνδεση", description: "Έγινες αποσύνδεση." });
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fdf7fb", color: "#333" }}>
-      {/* HEADER */}
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          background: "#fff",
-          borderBottom: "1px solid #ddd",
-          padding: "10px 20px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          zIndex: 50,
-        }}
-      >
-        <div style={{ fontSize: "20px", fontWeight: "bold" }}>AI Καφετζού</div>
-        <nav style={{ display: "flex", gap: "10px" }}>
-          <a href="/signup">
-            <button>Εγγραφή</button>
-          </a>
-          <a href="/login">
-            <button>Σύνδεση</button>
-          </a>
-          <a href="/logout">
-            <button>Έξοδος</button>
-          </a>
-        </nav>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 text-primary">
+            <House className="h-5 w-5" />
+            <span>Home</span>
+          </Link>
+
+          <h1 className="text-2xl font-bold text-primary">
+            <Coffee className="inline-block mr-2 h-6 w-6" />
+            Ανάγνωση Φλιτζανιού
+          </h1>
+
+          <div className="flex items-center gap-3">
+            {!isAuthed ? (
+              <Link
+                to="/auth"
+                className="inline-flex items-center text-primary hover:underline"
+                title="Εγγραφή / Σύνδεση"
+              >
+                <LogIn className="h-4 w-4 mr-1" />
+                Εγγραφή / Σύνδεση
+              </Link>
+            ) : (
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center text-muted-foreground hover:text-primary"
+                title="Αποσύνδεση"
+              >
+                <LogOut className="h-4 w-4 mr-1" />
+                Αποσύνδεση
+              </button>
+            )}
+          </div>
+        </div>
       </header>
 
-      {/* PERSONA PICKER */}
-      <section style={{ maxWidth: "900px", margin: "20px auto", padding: "0 20px" }}>
-        <div
-          style={{
-            border: "2px dashed #ddd",
-            borderRadius: "10px",
-            padding: "20px",
-            background: "#fff",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <h2>Διάλεξε Καφετζού</h2>
-              <p style={{ fontSize: "14px", color: "#666" }}>
-                Καθορίζει το ύφος απάντησης (κείμενο & αφήγηση).
-              </p>
-            </div>
-            <button onClick={() => setPickerOpen((v) => !v)}>
-              {pickerOpen ? "Απόκρυψη" : "Εμφάνιση"}
-            </button>
-          </div>
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Επιλογή Καφετζούς</CardTitle>
+            <CardDescription>
+              Διάλεξε ποια θα διαβάσει το φλιτζάνι σου
+            </CardDescription>
+          </CardHeader>
 
-          {pickerOpen && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: "15px",
-                marginTop: "20px",
-              }}
-            >
-              {FORTUNE_TELLERS.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setPersona(f.id)}
-                  style={{
-                    border: persona === f.id ? "2px solid purple" : "1px solid #ccc",
-                    borderRadius: "10px",
-                    padding: "10px",
-                    background: "#fafafa",
-                    textAlign: "left",
-                    cursor: "pointer",
-                  }}
-                >
-                  <div
-                    style={{
-                      aspectRatio: "4/3",
-                      background: "#f3e9f9",
-                      borderRadius: "8px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <img
-                      src={f.img}
-                      alt={f.name}
-                      style={{ maxHeight: "100%", maxWidth: "100%" }}
-                    />
-                  </div>
-                  <div style={{ marginTop: "8px" }}>
-                    <strong>{f.name}</strong>
-                    <p style={{ fontSize: "12px", color: "#666" }}>{f.desc}</p>
-                  </div>
-                  {persona === f.id && (
-                    <div style={{ color: "purple", fontSize: "12px" }}>✓ Επιλεγμένη</div>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                {/* Readers */}
+                <FormField
+                  control={form.control}
+                  name="reader"
+                  rules={{ required: "Παρακαλώ επίλεξε καφετζού" }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <div className="grid md:grid-cols-3 gap-4">
+                          {readers.map((r) => (
+                            <label
+                              key={r.id}
+                              className={`border rounded-xl overflow-hidden cursor-pointer transition ${
+                                field.value === r.id
+                                  ? "border-primary shadow-[0_0_0_2px_rgba(168,85,247,0.25)]"
+                                  : "border-primary/20 hover:border-primary/40"
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                value={r.id}
+                                checked={field.value === r.id}
+                                onChange={() => field.onChange(r.id)}
+                                className="hidden"
+                              />
+                              <img
+                                src={r.image}
+                                alt={r.name}
+                                className="w-full aspect-square object-cover"
+                              />
+                              <div className="px-4 py-3 text-center">
+                                <div className="font-medium text-primary">{r.name}</div>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  {r.description}
+                                </div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+                />
 
-      {/* PROFILE FORM */}
-      <main style={{ maxWidth: "900px", margin: "20px auto", padding: "0 20px" }}>
-        <h1>Στοιχεία Προφίλ</h1>
-        <div
-          style={{
-            background: "#fff",
-            padding: "20px",
-            borderRadius: "10px",
-            marginTop: "10px",
-          }}
-        >
-          <div style={{ display: "grid", gap: "15px" }}>
-            <div>
-              <label>Φύλο</label>
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                style={{ display: "block", width: "100%", marginTop: "5px" }}
-              >
-                <option value="male">Άνδρας</option>
-                <option value="female">Γυναίκα</option>
-                <option value="other">Άλλο</option>
-              </select>
-            </div>
+                {/* Profile */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Στοιχεία Προφίλ</CardTitle>
+                    <CardDescription>
+                      Μας βοηθούν να προσαρμόσουμε καλύτερα τον τόνο & το περιεχόμενο.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="gender"
+                        rules={{ required: "Επέλεξε φύλο" }}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Φύλο..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {genders.map((g) => (
+                                    <SelectItem key={g} value={g}>
+                                      {g}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-            <div>
-              <label>Ηλικία</label>
-              <select
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                style={{ display: "block", width: "100%", marginTop: "5px" }}
-              >
-                <option value="18-24">18-24</option>
-                <option value="25-34">25-34</option>
-                <option value="35-44">35-44</option>
-                <option value="45-54">45-54</option>
-                <option value="55+">55+</option>
-              </select>
-            </div>
+                      <FormField
+                        control={form.control}
+                        name="age_range"
+                        rules={{ required: "Επέλεξε ηλικιακό εύρος" }}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Ηλικιακό εύρος..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {ages.map((a) => (
+                                    <SelectItem key={a} value={a}>
+                                      {a}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
-            <div>
-              <label>Θεματική</label>
-              <select
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                style={{ display: "block", width: "100%", marginTop: "5px" }}
-              >
-                <option value="love">Ερωτικά</option>
-                <option value="career">Επαγγελματικά</option>
-                <option value="luck">Τύχη</option>
-                <option value="family">Οικογενειακά</option>
-                <option value="spiritual">Πνευματική & βαθιά</option>
-              </select>
-            </div>
+                {/* Interest / Mood */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    rules={{ required: "Επέλεξε τομέα" }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Τομέας ενδιαφέροντος..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.map((c) => (
+                                <SelectItem key={c} value={c}>
+                                  {c}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-            <div>
-              <label>Προαιρετική ερώτηση</label>
-              <textarea
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="π.χ. Θα βρω αγάπη φέτος;"
-                style={{ display: "block", width: "100%", marginTop: "5px" }}
-              />
-            </div>
+                  <FormField
+                    control={form.control}
+                    name="mood"
+                    rules={{ required: "Επέλεξε στυλ/διάθεση" }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Στυλ/διάθεση..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {moods.map((m) => (
+                                <SelectItem key={m} value={m}>
+                                  {m}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-            <div>
-              <label>Φωτογραφία Φλιτζανιού (προαιρετικό)</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                style={{ display: "block", marginTop: "5px" }}
-              />
-            </div>
+                {/* Optional question */}
+                <FormField
+                  control={form.control}
+                  name="question"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Προαιρετική ερώτηση (π.χ. Θα βρω αγάπη φέτος;)"
+                          className="min-h-[100px] resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div>
-              <button
-                onClick={startReading}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  background: "purple",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                }}
-              >
-                Ξεκίνα την Ανάγνωση
-              </button>
-              <p style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>
-                * Αν δεν επιλέξεις καφετζού, χρησιμοποιείται προεπιλογή:
-                <strong> Κλασική</strong>.
-              </p>
-            </div>
-          </div>
-        </div>
-      </main>
+                {/* Upload area with dashed border kept */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Φωτογραφία Φλιτζανιού (προαιρετικό)</CardTitle>
+                    <CardDescription>
+                      Αν έχεις καθαρή φωτογραφία από το φλιτζάνι σου, ανέβασέ την.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <label className="flex flex-col items-center justify-center w-full h-56 border-2 border-dashed rounded-xl cursor-pointer transition hover:border-primary/50">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="sr-only"
+                      />
+                      {imagePreview ? (
+                        <img
+                          src={imagePreview}
+                          className="h-44 object-contain transition-opacity duration-300 opacity-100"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center text-muted-foreground">
+                          <ImageIcon className="h-8 w-8 mb-2" />
+                          <span>Κάνε κλικ για να επιλέξεις εικόνα</span>
+                        </div>
+                      )}
+                    </label>
+                  </CardContent>
+                </Card>
 
-      <footer
-        style={{
-          maxWidth: "900px",
-          margin: "20px auto",
-          padding: "10px",
-          textAlign: "center",
-          fontSize: "12px",
-          color: "#666",
-        }}
-      >
-        © {new Date().getFullYear()} AI Καφετζού
-      </footer>
+                <div className="text-center">
+                  <Button
+                    type="submit"
+                    size="lg"
+                    disabled={isLoading}
+                    className="px-8"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
+                        Προετοιμάζεται ο χρησμός...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-5 w-5" />
+                        Ξεκίνα την Ανάγνωση
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -1,349 +1,493 @@
+// src/pages/Cup.tsx
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
+import type { User } from "@supabase/supabase-js";
 
-type PersonaId = "classic" | "young" | "mystic";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-const PERSONAS: { id: PersonaId; name: string; desc: string; img: string }[] = [
-  {
-    id: "classic",
-    name: "Μαίρη, η 'ψαγμένη'",
-    desc: "έμπειρη καφετζού με βαθιά γνώση και παράδοση",
-    img: "/images/personas/maria.png",
-  },
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Form, FormItem, FormMessage, FormField, FormControl } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+import { Coffee, Sparkles, ImageIcon } from "lucide-react";
+import AuthRedirectGuard from '@/hooks/AuthRedirectGuard';
+import { SignInWithGoogle, SignOut } from '@/components/AuthButtons';
+import StartReadingButton from '@/components/StartReadingButton';
+
+
+type CupForm = {
+  reader: string;
+  category: string;
+  mood: string;
+  question?: string;
+  image: File | null;
+  gender: string;
+  age_range: string;
+};
+
+const readers = [
   {
     id: "young",
-    name: "Ρένα, η μοντέρνα",
-    desc: "σύγχρονη προσέγγιση με νεανικό πνεύμα",
-    img: "/images/personas/rena.png",
+    name: "Ρένα η μοντέρνα",
+    description: "Φρέσκες προβλέψεις με νεανική αισιοδοξία",
+    image:
+      "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/modern%20woman.png?v=2",
   },
   {
-    id: "mystic",
-    name: "Ισιδώρα, η πνευματική",
-    desc: "συνδέει τον κόσμο με το πνεύμα και τη σοφία",
-    img: "/images/personas/isidora.png",
+    id: "experienced",
+    name: "Μαίρη η ψαγμένη",
+    description: "Ισορροπημένη οπτική με εμπειρία ζωής",
+    image:
+      "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/katina-klassiki.png?v=2",
+  },
+  {
+    id: "wise",
+    name: "Ισιδώρα η πνευματική",
+    description: "Αρχαία σοφία και βαθιές προβλέψεις",
+    image:
+      "https://ziqhqdorqfowubjrchyu.supabase.co/storage/v1/object/public/tellers/mystic%20woman.png?v=2",
   },
 ];
 
-const GENDERS = ["Άνδρας", "Γυναίκα", "Άλλο"] as const;
-type Gender = (typeof GENDERS)[number];
+const categories = [
+  "Γενικό Μέλλον",
+  "Αγάπη & Σχέσεις",
+  "Καριέρα & Εργασία",
+  "Υγεία & Ευεξία",
+  "Οικογένεια & Φίλοι",
+  "Χρήματα & Οικονομικά",
+  "Ταξίδια & Περιπέτειες",
+  "Πνευματική Ανάπτυξη",
+];
 
-const AGE_GROUPS = ["17-24", "25-34", "35-44", "45-54", "55-64", "65+"] as const;
-type AgeGroup = (typeof AGE_GROUPS)[number];
+const moods = [
+  "Ζεστή & ενθαρρυντική",
+  "Ισορροπημένη & αντικειμενική",
+  "Πνευματική & βαθιά",
+  "Ανάλαφρη & αισιόδοξη",
+];
 
-const MOODS = [
-  "Ουδέτερο",
-  "Χαρούμενο",
-  "Αγχωμένο",
-  "Θλιμμένο",
-  "Αναποφάσιστο/η",
-  "Στενοχωρημένο/η",
-  "Ενθουσιασμένο/η",
-  "Ερωτευμένο/η",
-] as const;
-type Mood = (typeof MOODS)[number];
-
-const TOPICS = [
-  "Έρωτας",
-  "Τύχη",
-  "Καριέρα",
-  "Οικογένεια",
-  "Υγεία",
-  "Χρήματα",
-  "Ταξίδια",
-  "Φίλοι",
-] as const;
-type Topic = (typeof TOPICS)[number];
-
-type PersistedForm = {
-  persona: PersonaId;
-  gender: Gender | "";
-  age: AgeGroup | "";
-  mood: Mood;
-  topics: Topic[];
-  question: string;
-};
+const genders = ["Γυναίκα", "Άνδρας", "Άλλο/Μη δυαδικό"];
+const ages = ["18-24", "25-34", "35-44", "45-54", "55+"];
 
 export default function Cup() {
-  const nav = useNavigate();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const [persona, setPersona] = useState<PersonaId>("classic");
-  const [gender, setGender] = useState<Gender | "">("");
-  const [age, setAge] = useState<AgeGroup | "">("");
-  const [mood, setMood] = useState<Mood>("Ουδέτερο");
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [question, setQuestion] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
 
+  // === Auth hydrate + live updates ===
   useEffect(() => {
-    const raw = localStorage.getItem("cupForm");
-    if (raw) {
-      try {
-        const f = JSON.parse(raw) as PersistedForm;
-        if (f.persona) setPersona(f.persona);
-        setGender(f.gender);
-        setAge(f.age);
-        setMood(f.mood ?? "Ουδέτερο");
-        setTopics(f.topics ?? []);
-        setQuestion(f.question ?? "");
-      } catch {}
-      localStorage.removeItem("cupForm");
-    }
+    supabase.auth.getSession().then(({ data }) => {
+      setSessionToken(data.session?.access_token ?? null);
+    });
+    supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null));
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSessionToken(session?.access_token ?? null);
+      setUser(session?.user ?? null);
+    });
+    return () => sub.subscription.unsubscribe();
   }, []);
 
-  const personaObj = useMemo(
-    () => PERSONAS.find((p) => p.id === persona)!,
-    [persona]
-  );
+  const form = useForm<CupForm>({
+    defaultValues: {
+      reader: "",
+      category: "",
+      mood: "",
+      question: "",
+      image: null,
+      gender: "",
+      age_range: "",
+    },
+  });
 
-  const toggleTopic = (t: Topic) =>
-    setTopics((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
-
-  const onFile = (f: File | null) => {
-    setFile(f);
-    setPreview(f ? URL.createObjectURL(f) : null);
+  // preview εικόνας με όμορφο placeholder/πλαίσιο
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    form.setValue("image", file);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
+    } else {
+      setImagePreview(null);
+    }
   };
 
-  const validate = () => {
-    if (!gender) return "Το *Φύλο* είναι υποχρεωτικό.";
-    if (!age) return "Το *Ηλικιακό γκρουπ* είναι υποχρεωτικό.";
-    if (!file) return "Ανέβασε φωτογραφία του φλιτζανιού.";
-    return null;
+  // optional upload στο bucket 'uploads'
+  const uploadCupImage = async (file: File) => {
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData.user?.id ?? "anonymous";
+    const path = `cups/${uid}/${Date.now()}_${file.name}`;
+    const { error } = await supabase.storage.from("uploads").upload(path, file, {
+      upsert: true,
+      contentType: file.type || "image/jpeg",
+    });
+    if (error) throw error;
+    const { data } = supabase.storage.from("uploads").getPublicUrl(path);
+    return data.publicUrl as string;
   };
 
-  const start = async () => {
-    setErr(null);
-    const v = validate();
-    if (v) return setErr(v);
+  const signIn = async () => {
+    // Διάλεξε πάροχο που θες — Google για ευκολία.
+    await supabase.auth.signInWithOAuth({ provider: "google" });
+  };
 
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) {
-      const toStore: PersistedForm = { persona, gender, age, mood, topics, question };
-      localStorage.setItem("cupForm", JSON.stringify(toStore));
-      localStorage.setItem("returnTo", "/cup");
-      return nav("/auth");
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    toast({ title: "Αποσυνδεθήκατε" });
+  };
+
+  const isFormDisabled = useMemo(() => !user || isLoading, [user, isLoading]);
+
+  const onSubmit = async (values: CupForm) => {
+    if (!sessionToken || !user) {
+      toast({
+        title: "Απαιτείται σύνδεση",
+        description: "Συνδέσου για να ξεκινήσεις την ανάγνωση.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const readerName =
+      readers.find((r) => r.id === values.reader)?.name || "Ρένα η μοντέρνα";
+
+    let image_url: string | null = null;
+    try {
+      if (values.image) {
+        image_url = await uploadCupImage(values.image);
+      }
+    } catch (e: any) {
+      console.warn("Upload image failed:", e?.message ?? e);
     }
 
     try {
-      setBusy(true);
-      const safeName = file!.name.replace(/\s+/g, "_");
-      const path = `${auth.user.id}/${Date.now()}_${safeName}`;
-      const up = await supabase.storage.from("cups").upload(path, file!, { upsert: false });
-      if (up.error) throw up.error;
-      const imageUrl = supabase.storage.from("cups").getPublicUrl(path).data.publicUrl;
+      setIsLoading(true);
 
-      const meta =
-        `Περσόνα: ${personaObj.name}\n` +
-        `Φύλο: ${gender}\nΗλικιακό γκρουπ: ${age}\n` +
-        `Κατάσταση: ${mood}\n` +
-        `Θέματα: ${topics.join(", ") || "—"}\n` +
-        `Ερώτηση: ${question || "—"}`;
+      // 1) Edge Function για παραγωγή χρησμού (AUTH απαιτείται)
+      const { data, error } = await supabase.functions.invoke("reading", {
+        body: {
+          reader: readerName,
+          category: values.category,
+          mood: values.mood,
+          question: values.question,
+          image_url,
+          gender: values.gender,
+          age_range: values.age_range,
+        },
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error ?? "Άγνωστο σφάλμα");
 
-      const { data, error } = await supabase
+      // 2) Αποθήκευση σε πίνακα `readings` (ώστε να υπάρχει πέρμα)
+      //    Αν δεν υπάρχει ο πίνακας, δες SQL πιο κάτω.
+      const insertPayload = {
+        user_id: user.id,
+        persona: data.persona,
+        profile: data.profile ?? null,
+        category: values.category,
+        mood: values.mood,
+        question: values.question ?? null,
+        image_url,
+        text: data.text,
+        tts_url: data.tts_url ?? null,
+        created_at: data.created_at, // από το function
+      };
+
+      const { data: row, error: dbErr } = await supabase
         .from("readings")
-        .insert({
-          user_id: auth.user.id,
-          image_url: imageUrl,
-          text: `${meta}\n\nΗ ανάλυση ετοιμάζεται…`,
-        })
+        .insert(insertPayload)
         .select("id")
         .single();
 
-      if (error || !data) throw error || new Error("Insert failed");
-      nav(`/reading/${data.id}`);
+      // 3) Μετάβαση στη σελίδα αποτελέσματος
+      if (!dbErr && row?.id) {
+        navigate(`/reading/${row.id}`);
+      } else {
+        // fallback: πέρασε state αν δεν σώθηκε (να μη χαθεί ο χρησμός)
+        navigate(`/reading`, {
+          state: {
+            fromMemory: true,
+            temp: insertPayload,
+          },
+        });
+      }
     } catch (e: any) {
-      console.error(e);
-      setErr(e.message || "Κάτι πήγε στραβά.");
+      toast({ title: "Σφάλμα", description: String(e?.message ?? e), variant: "destructive" });
     } finally {
-      setBusy(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
-      <header className="mb-8">
-        <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-          Ξεκλείδωσε την Αρχαία Τέχνη της Καφεμαντείας
-        </h1>
-        <p className="mt-3 text-lg opacity-80 max-w-3xl">
-          Το πεπρωμένο σου σε περιμένει στο φλιτζάνι σου. Με την βοήθεια της Τεχνητής Νοημοσύνης,
-          οι συμβολισμοί αποκτούν φωνή — εξατομικευμένα, ζεστά και ουσιαστικά.
-        </p>
-      </header>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 text-primary font-medium">
+            Home
+          </Link>
 
-      {/* PERSONAS */}
-      <section>
-        <h2 className="text-xl font-semibold mb-4">Διάλεξε Καφετζού</h2>
-        <div className="grid md:grid-cols-3 gap-5">
-          {PERSONAS.map((p) => {
-            const active = persona === p.id;
-            return (
-              <button
-                key={p.id}
-                onClick={() => setPersona(p.id)}
-                className={`group rounded-2xl border overflow-hidden bg-white shadow-sm hover:shadow-md transition text-left ${
-                  active ? "ring-2 ring-black" : ""
-                }`}
-                title={`Επιλογή: ${p.name}`}
-              >
-                <div className="w-full" style={{ aspectRatio: "4 / 3" }}>
-                  <img
-                    src={p.img}
-                    alt={p.name}
-                    className="w-full h-full object-cover block"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = "/placeholder.svg";
-                    }}
-                    loading="eager"
-                  />
-                </div>
-                <div className="p-4">
-                  <div className="font-semibold">{p.name}</div>
-                  <div className="text-sm opacity-70">{p.desc}</div>
-                  <div className="mt-3 text-sm underline group-hover:no-underline">
-                    {active ? "Επιλεγμένη" : "Επίλεξε"}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+          <h1 className="text-2xl font-bold text-primary flex items-center">
+            <Coffee className="inline-block mr-2 h-6 w-6" />
+            Ανάγνωση Φλιτζανιού
+          </h1>
 
-      {/* Required fields */}
-      <section className="mt-10 grid md:grid-cols-2 gap-6">
-        <div>
-          <h2 className="text-xl font-semibold mb-3">
-            Φύλο <span className="text-red-600">*</span>
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {GENDERS.map((g) => (
-              <button
-                key={g}
-                onClick={() => setGender(g)}
-                className={`px-3 py-2 rounded-full border ${
-                  gender === g ? "bg-black text-white" : "bg-white hover:bg-gray-50"
-                }`}
-              >
-                {g}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h2 className="text-xl font-semibold mb-3">
-            Ηλικιακό γκρουπ <span className="text-red-600">*</span>
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {AGE_GROUPS.map((a) => (
-              <button
-                key={a}
-                onClick={() => setAge(a)}
-                className={`px-3 py-2 rounded-full border ${
-                  age === a ? "bg-black text-white" : "bg-white hover:bg-gray-50"
-                }`}
-              >
-                {a}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Mood */}
-      <section className="mt-10">
-        <h2 className="text-xl font-semibold mb-3">Κατάσταση</h2>
-        <div className="flex flex-wrap gap-2">
-          {MOODS.map((m) => (
-            <button
-              key={m}
-              onClick={() => setMood(m)}
-              className={`px-3 py-2 rounded-full border ${
-                mood === m ? "bg-black text-white" : "bg-white hover:bg-gray-50"
-              }`}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Topics */}
-      <section className="mt-10">
-        <h2 className="text-xl font-semibold mb-3">Θέματα που σε ενδιαφέρουν</h2>
-        <div className="flex flex-wrap gap-2">
-          {TOPICS.map((t) => {
-            const on = topics.includes(t);
-            return (
-              <button
-                key={t}
-                onClick={() => toggleTopic(t)}
-                className={`px-3 py-2 rounded-full border ${
-                  on ? "bg-black text-white" : "bg-white hover:bg-gray-50"
-                }`}
-              >
-                {t}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Personalized Question */}
-      <section className="mt-10">
-        <h2 className="text-xl font-semibold mb-3">Προσωποποιημένη ερώτηση (προαιρετικό)</h2>
-        <input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Γράψε την ερώτησή σου…"
-          className="w-full rounded-xl border px-3 py-2"
-          maxLength={240}
-        />
-        <div className="text-xs opacity-60 mt-1">{question.length}/240</div>
-      </section>
-
-      {/* Upload + CTA */}
-      <section className="mt-10">
-        <h2 className="text-xl font-semibold mb-3">
-          Ανέβασε το Φλιτζάνι σου <span className="text-red-600">*</span>
-        </h2>
-
-        <div className="grid md:grid-cols-[280px_1fr] gap-6 items-start">
-          <div className="rounded-2xl border bg-white overflow-hidden w-[280px] h-[280px] flex items-center justify-center">
-            {preview ? (
-              <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+          <div className="flex items-center gap-2">
+            {user ? (
+              <>
+                <span className="text-sm text-muted-foreground hidden md:inline">
+                  Συνδεδεμένος/η
+                </span>
+                <Button variant="outline" size="sm" onClick={signOut}>
+                  Αποσύνδεση
+                </Button>
+              </>
             ) : (
-              <div className="text-sm opacity-60 p-4 text-center">
-                Καμία εικόνα<br />Επίλεξε ένα αρχείο για προεπισκόπηση
-              </div>
+              <Button size="sm" onClick={signIn}>
+                Εγγραφή / Σύνδεση
+              </Button>
             )}
           </div>
-
-          <div className="flex flex-col gap-3">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => onFile(e.target.files?.[0] || null)}
-            />
-            <button
-              onClick={start}
-              disabled={busy}
-              className="rounded-xl px-5 py-3 bg-black text-white hover:opacity-90 transition disabled:opacity-40 w-fit"
-            >
-              {busy ? "Ανάλυση…" : "Ανάλυση τώρα"}
-            </button>
-            {err && <p className="text-red-600 text-sm">{err}</p>}
-            <p className="text-xs opacity-60">
-              * Απαραίτητα πεδία: Φύλο, Ηλικιακό γκρουπ, Εικόνα φλιτζανιού
-            </p>
-          </div>
         </div>
-      </section>
+      </header>
+
+      {/* Αν δεν είναι συνδεδεμένος, ξεκάθαρο banner */}
+      {!user && (
+        <div className="container mx-auto px-4 mt-4">
+          <Card className="border-primary/30">
+            <CardContent className="py-4 text-sm text-muted-foreground">
+              Για να πάρεις χρησμό, χρειάζεται να κάνεις <b>Εγγραφή/Σύνδεση</b>.
+              Μετά την είσοδο, πάτησε «Ξεκίνα την Ανάγνωση».
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <AuthRedirectGuard />
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <SignInWithGoogle />
+        <SignOut />
+      </div>
+      <StartReadingButton />
+
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Επιλογή Καφετζούς</CardTitle>
+            <CardDescription>Διάλεξε ποια θα διαβάσει το φλιτζάνι σου</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                {/* Readers */}
+                <FormField
+                  control={form.control}
+                  name="reader"
+                  rules={{ required: "Παρακαλώ επίλεξε καφετζού" }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <div className="grid md:grid-cols-3 gap-4">
+                          {readers.map((r) => (
+                            <label
+                              key={r.id}
+                              className={`border rounded-xl overflow-hidden cursor-pointer transition ${
+                                field.value === r.id
+                                  ? "border-primary shadow-[0_0_0_2px_rgba(168,85,247,0.25)]"
+                                  : "border-primary/20 hover:border-primary/40"
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                value={r.id}
+                                checked={field.value === r.id}
+                                onChange={() => field.onChange(r.id)}
+                                className="hidden"
+                              />
+                              <img src={r.image} alt={r.name} className="w-full aspect-square object-cover" />
+                              <div className="px-4 py-3 text-center">
+                                <div className="font-medium text-primary">{r.name}</div>
+                                <div className="text-sm text-muted-foreground mt-1">{r.description}</div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Profile (gender / age) */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Στοιχεία Προφίλ</CardTitle>
+                    <CardDescription>Βοηθούν να προσαρμόσουμε καλύτερα τον τόνο & το περιεχόμενο.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="gender"
+                        rules={{ required: "Επέλεξε φύλο" }}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Select onValueChange={field.onChange} value={field.value} disabled={isFormDisabled}>
+                                <SelectTrigger><SelectValue placeholder="Φύλο..." /></SelectTrigger>
+                                <SelectContent>
+                                  {genders.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="age_range"
+                        rules={{ required: "Επέλεξε ηλικιακό εύρος" }}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Select onValueChange={field.onChange} value={field.value} disabled={isFormDisabled}>
+                                <SelectTrigger><SelectValue placeholder="Ηλικιακό εύρος..." /></SelectTrigger>
+                                <SelectContent>
+                                  {ages.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Interest / Mood */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    rules={{ required: "Επέλεξε τομέα" }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={isFormDisabled}>
+                            <SelectTrigger><SelectValue placeholder="Τομέας ενδιαφέροντος..." /></SelectTrigger>
+                            <SelectContent>
+                              {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="mood"
+                    rules={{ required: "Επέλεξε στυλ/διάθεση" }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={isFormDisabled}>
+                            <SelectTrigger><SelectValue placeholder="Στυλ/διάθεση..." /></SelectTrigger>
+                            <SelectContent>
+                              {moods.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Question */}
+                <FormField
+                  control={form.control}
+                  name="question"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Προαιρετική ερώτηση (π.χ. Θα βρω αγάπη φέτος;)"
+                          className="min-h-[100px] resize-none"
+                          disabled={isFormDisabled}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Upload area (πλαίσιο + placeholder + smooth preview) */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Φωτογραφία Φλιτζανιού (προαιρετικό)</CardTitle>
+                    <CardDescription>Αν έχεις καθαρή φωτογραφία από το φλιτζάνι σου, ανέβασέ την.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <label className="flex flex-col items-center justify-center w-full h-56 border-2 border-dashed rounded-xl cursor-pointer transition hover:border-primary/50 bg-muted/20">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="sr-only"
+                        disabled={isFormDisabled}
+                      />
+                      {imagePreview ? (
+                        <img
+                          src={imagePreview}
+                          className="h-44 object-contain transition-opacity duration-300 opacity-100"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center text-muted-foreground">
+                          <ImageIcon className="h-8 w-8 mb-2" />
+                          <span>Κάνε κλικ για να επιλέξεις εικόνα</span>
+                        </div>
+                      )}
+                    </label>
+                  </CardContent>
+                </Card>
+
+                <div className="text-center">
+                  <Button type="submit" size="lg" disabled={isFormDisabled} className="px-8">
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
+                        Προετοιμάζεται ο χρησμός...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-5 w-5" />
+                        Ξεκίνα την Ανάγνωση
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+// src/components/AuthButtons.tsx
 'use client';
 import { supabase } from '@/lib/supabase';
 

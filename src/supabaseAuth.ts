@@ -1,3 +1,3 @@
 
-// src/supabaseAuth.ts
-export { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
+export { supabase };
