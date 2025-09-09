@@ -1,67 +1,134 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
 
-type AuthCtx = {
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Profile {
+  id: string;
+  user_id: string;
+  username?: string;
+  display_name?: string;
+  avatar_url?: string;
+  bio?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface UserRole {
+  id: string;
+  user_id: string;
+  role: 'admin' | 'moderator' | 'user';
+  created_at: string;
+}
+
+interface AuthContextType {
   user: User | null;
   session: Session | null;
+  profile: Profile | null;
+  userRole: UserRole | null;
   loading: boolean;
-  signInWithOtp: (email: string) => Promise<{ error: Error | null }>;
-  signOut: () => Promise<{ error: Error | null }>;
-};
+  signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
+}
 
-const AuthContext = createContext<AuthCtx | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session ?? null);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+  const fetchProfile = async (userId: string) => {
+    try {
+      // Cast σε any για να παρακάμψουμε τα generated types που δεν έχουν (ακόμα) profiles/user_roles
+      const { data: profileData } = await (supabase as any)
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session ?? null);
-      setUser(session?.user ?? null);
-    });
+      const { data: roleData } = await (supabase as any)
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    return () => {
-      sub.subscription.unsubscribe();
-    };
-  }, []);
+      setProfile((profileData as Profile) || null);
+      setUserRole((roleData as UserRole) || null);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
 
-  const signInWithOtp = async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({ email });
-    return { error: error ?? null };
+  const refreshProfile = async () => {
+    if (user?.id) {
+      await fetchProfile(user.id);
+    }
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error: error ?? null };
+    await supabase.auth.signOut();
+  };
+
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Defer profile fetching to avoid deadlock
+          setTimeout(() => {
+            fetchProfile(session.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+          setUserRole(null);
+        }
+        
+        setLoading(false);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      }
+      
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const value = {
+    user,
+    session,
+    profile,
+    userRole,
+    loading,
+    signOut,
+    refreshProfile,
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signInWithOtp, signOut }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    console.warn("⚠️ useAuth called outside AuthProvider");
-    return {
-      user: null,
-      session: null,
-      loading: false,
-      signInWithOtp: async () => ({ error: new Error("No AuthProvider") }),
-      signOut: async () => ({ error: null }),
-    } as const;
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
-  return ctx;
-};
+  return context;
+}

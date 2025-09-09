@@ -1,34 +1,72 @@
-import React from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 
-const Header: React.FC = () => {
-  const { user, loading, signOut, profile } = useAuth();
-  const navigate = useNavigate();
-  const name = (profile?.full_name || profile?.name) ?? user?.email ?? "Επισκέπτης";
+export default function Header() {
+  const [email, setEmail] = useState<string | null>(null);
+  const nav = useNavigate();
+  const loc = useLocation();
+
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      setEmail(data.session?.user?.email ?? null);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setEmail(session?.user?.email ?? null);
+    });
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  const goAuth = () => {
+    localStorage.setItem("returnTo", loc.pathname + loc.search);
+    nav("/auth");
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    nav("/");
+  };
 
   return (
-    <header className="header">
-      <div className="header-inner container">
-        <Link to="/" className="brand" style={{ fontSize: 20 }}>AI Καφετζού</Link>
+    <header className="w-full border-b bg-white/70 backdrop-blur sticky top-0 z-50">
+      <div className="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
+        <Link to="/" className="font-bold">
+          ΑΙ Καφετζού
+        </Link>
 
-        <nav style={{ display: "flex", gap: 8 }}>
-          <Link to="/cup">Ανάγνωση</Link>
-        </nav>
+        <nav className="flex items-center gap-3">
+          <Link to="/cup" className="hover:underline">
+            Ανάγνωση
+          </Link>
+          <Link to="/my-readings" className="hover:underline">
+            Τα Χρησμολόγιά μου
+          </Link>
 
-        <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
-          {!loading && user ? (
-            <>
-              <span style={{ color: "var(--muted)" }}>Γεια σου, {name}</span>
-              <button className="btn btn-outline" onClick={() => signOut()}>Αποσύνδεση</button>
-            </>
+          {!email ? (
+            <button
+              onClick={goAuth}
+              className="ml-2 rounded-lg px-3 py-1.5 bg-black text-white hover:opacity-90"
+            >
+              Σύνδεση / Εγγραφή
+            </button>
           ) : (
-            <button className="btn btn-primary" onClick={() => navigate("/auth")}>Εγγραφή / Σύνδεση</button>
+            <div className="flex items-center gap-2">
+              <span className="text-sm opacity-75 hidden sm:inline">{email}</span>
+              <button
+                onClick={signOut}
+                className="rounded-lg px-3 py-1.5 border hover:bg-gray-50"
+              >
+                Αποσύνδεση
+              </button>
+            </div>
           )}
-        </div>
+        </nav>
       </div>
     </header>
   );
-};
-
-export default Header;
+}

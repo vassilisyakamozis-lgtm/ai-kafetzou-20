@@ -1,332 +1,316 @@
-"use client";
-
-import { useState, useEffect } from "react";
+// src/components/CupReadingResult.tsx
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Volume2, VolumeX, Save, ArrowLeft, Download, Share2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { ArrowLeft, Download, Share2, Save, Volume2, VolumeX, ClipboardCheck } from "lucide-react";
+import { jsPDF } from "jspdf";
 
-interface CupReadingResultProps {
-  reading: string;
-  readerInfo: {
-    id: string;
-    name: string;
-    description: string;
-  };
-  uploadedImage?: string;
-  detectedSymbols?: string[];
-  onBack: () => void;
-  onSave?: (reading: string) => Promise<void>;
-}
-
-const VOICE_MAPPING = {
-  young: { voice: "nova", name: "Νεαρή Μάντισσα", age: "νεανική" },
-  experienced: { voice: "shimmer", name: "Έμπειρη Καφετζού", age: "ώριμη" },
-  wise: { voice: "alloy", name: "Σοφή Γιαγιά", age: "σοφή" },
-} as const;
-
-const b64ToBlobUrl = (b64: string, mime = "audio/mpeg") => {
-  const byteChars = atob(b64);
-  const byteNumbers = new Array(byteChars.length);
-  for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
-  const byteArray = new Uint8Array(byteNumbers);
-  const blob = new Blob([byteArray], { type: mime });
-  return URL.createObjectURL(blob);
+type ReaderInfo = {
+  id: string;
+  name: string;
+  description: string;
+  image?: string;
 };
+
+type Props = {
+  reading: string;
+  readerInfo: ReaderInfo;
+  onBack: () => void;
+  /** Αν η Edge Function επιστρέφει URL έτοιμου ήχου, θα το παίξουμε από εδώ */
+  ttsUrl?: string;
+  /** Προαιρετικά, για metadata & prompt-context */
+  gender?: string;
+  ageRange?: string;
+};
+
+const formatDateTime = (d = new Date()) =>
+  d.toLocaleString("el-GR", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+const STORAGE_KEY = "cup_readings";
 
 const CupReadingResult = ({
   reading,
   readerInfo,
-  uploadedImage,
-  detectedSymbols = [],
   onBack,
-  onSave,
-}: CupReadingResultProps) => {
+  ttsUrl,
+  gender,
+  ageRange,
+}: Props) => {
   const { toast } = useToast();
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
+  const producedAt = useMemo(() => new Date(), []);
+  const producedAtLabel = useMemo(() => formatDateTime(producedAt), [producedAt]);
 
-  const voiceConfig =
-    VOICE_MAPPING[(readerInfo?.id as keyof typeof VOICE_MAPPING) || "experienced"] ??
-    VOICE_MAPPING.experienced;
+  // ---- TTS State ----
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
+  // Αν μας ήρθε έτοιμος ήχος από Edge (ttsUrl), ετοιμάζουμε <audio>
   useEffect(() => {
+    if (ttsUrl) {
+      audioRef.current = new Audio(ttsUrl);
+      audioRef.current.onended = () => setIsSpeaking(false);
+    }
     return () => {
-      if (currentAudio) {
-        try {
-          currentAudio.pause();
-          URL.revokeObjectURL(currentAudio.src);
-          currentAudio.src = "";
-        } catch {}
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
       }
     };
-  }, [currentAudio]);
+  }, [ttsUrl]);
 
-  const handlePlayAudio = async () => {
+  // ---- TTS: Web Speech fallback ----
+  const speakWithWebSpeech = () => {
+    // Σταματάμε ό,τι παίζει ήδη
+    stopTTS();
+
+    const u = new SpeechSynthesisUtterance(reading);
+    // Προσπαθούμε να βρούμε ελληνική φωνή
+    const voices = window.speechSynthesis.getVoices();
+    const elVoice =
+      voices.find((v) => v.lang?.toLowerCase().startsWith("el")) ||
+      voices.find((v) => v.lang?.toLowerCase().startsWith("gr"));
+
+    if (elVoice) u.voice = elVoice;
+    u.lang = elVoice?.lang || "el-GR";
+    u.rate = 1;
+    u.pitch = 1;
+
+    u.onend = () => setIsSpeaking(false);
+    u.onerror = () => setIsSpeaking(false);
+
+    utteranceRef.current = u;
+    window.speechSynthesis.speak(u);
+    setIsSpeaking(true);
+  };
+
+  const playTTS = async () => {
     try {
-      if (isPlaying && currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
-        setIsPlaying(false);
+      if (audioRef.current) {
+        // Έχουμε έτοιμο mp3 από Edge
+        stopTTS();
+        await audioRef.current.play();
+        setIsSpeaking(true);
         return;
       }
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
-        URL.revokeObjectURL(currentAudio.src);
-      }
-
-      setIsPlaying(true);
-      toast({ title: "🔊 Ο Χρησμός σου παίζει…", description: "Άκου προσεκτικά τις προβλέψεις σου" });
-
-      const { data, error } = await supabase.functions.invoke("text-to-speech", {
-        body: { text: reading, voice: voiceConfig.voice },
-      });
-      if (error || !data?.audioContent) throw new Error("TTS failed");
-
-      const url = b64ToBlobUrl(data.audioContent);
-      const audio = new Audio(url);
-      setCurrentAudio(audio);
-
-      audio.onended = () => {
-        setIsPlaying(false);
-        URL.revokeObjectURL(url);
-      };
-      audio.onerror = () => {
-        setIsPlaying(false);
-        URL.revokeObjectURL(url);
-        toast({
-          title: "Σφάλμα αναπαραγωγής",
-          description: "Δεν ήταν δυνατή η αναπαραγωγή του ήχου.",
-          variant: "destructive",
-        });
-      };
-
-      await audio.play();
-    } catch {
-      setIsPlaying(false);
+      // Αλλιώς Web Speech
+      speakWithWebSpeech();
+    } catch (e) {
       toast({
-        title: "Σφάλμα",
-        description: "Δεν ήταν δυνατή η δημιουργία ήχου. Δοκιμάστε ξανά.",
+        title: "Σφάλμα ήχου",
+        description: "Δεν ήταν δυνατή η αναπαραγωγή. Δοκίμασε ξανά.",
         variant: "destructive",
       });
     }
   };
 
-  const handleSave = async () => {
-    if (!onSave) return;
-    setIsSaving(true);
+  const stopTTS = () => {
+    // Audio από Edge
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    // Web Speech
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
+    setIsSpeaking(false);
+  };
+
+  // ---- Download PDF ----
+  const downloadPDF = () => {
     try {
-      await onSave(reading);
-      toast({ title: "Επιτυχής αποθήκευση", description: "Ο χρησμός αποθηκεύτηκε στον λογαριασμό σας." });
+      const doc = new jsPDF({
+        unit: "pt",
+        format: "a4",
+      });
+
+      const margin = 40;
+      const maxWidth = 515; // a4 width - margins
+      const title = `Ανάγνωση Φλιτζανιού — ${readerInfo?.name || ""}`;
+      const meta = [
+        producedAtLabel,
+        gender ? `Φύλο: ${gender}` : "",
+        ageRange ? `Ηλικιακό εύρος: ${ageRange}` : "",
+      ]
+        .filter(Boolean)
+        .join(" • ");
+
+      doc.setFont("Times", "Bold");
+      doc.setFontSize(16);
+      doc.text(title, margin, 60);
+
+      doc.setFont("Times", "Normal");
+      doc.setFontSize(11);
+      doc.setTextColor("#666666");
+      doc.text(meta, margin, 80);
+
+      doc.setTextColor("#000000");
+      doc.setFontSize(12);
+
+      const lines = doc.splitTextToSize(reading, maxWidth);
+      doc.text(lines, margin, 110, { lineHeightFactor: 1.35 });
+
+      const fn = `kafetzou-reading-${new Date().toISOString().slice(0, 10)}.pdf`;
+      doc.save(fn);
+
+      toast({ title: "Έτοιμο!", description: "Κατέβηκε το PDF." });
+    } catch (e) {
+      toast({
+        title: "Σφάλμα PDF",
+        description: "Δεν ήταν δυνατή η δημιουργία PDF.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // ---- Share ----
+  const shareReading = async () => {
+    const text = `${readerInfo?.name} • ${producedAtLabel}\n\n${reading}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Ανάγνωση Φλιτζανιού",
+          text,
+        });
+      } catch {
+        // ακύρωση ή σφάλμα — απλώς σιωπή
+      }
+      return;
+    }
+    // Fallback: copy
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Αντιγράφηκε!", description: "Το κείμενο αντιγράφηκε στο πρόχειρο." });
+    } catch {
+      toast({
+        title: "Αποτυχία αντιγραφής",
+        description: "Δεν ήταν δυνατή η αντιγραφή στο clipboard.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // ---- Save (τοπικά χωρίς login) ----
+  const saveLocally = () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const arr = raw ? (JSON.parse(raw) as any[]) : [];
+
+      const item = {
+        id: crypto.randomUUID(),
+        producedAt: producedAt.toISOString(),
+        reader: readerInfo?.name,
+        readerId: readerInfo?.id,
+        gender: gender || null,
+        ageRange: ageRange || null,
+        text: reading,
+      };
+      arr.unshift(item);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+
+      toast({ title: "Αποθηκεύτηκε", description: "Ο χρησμός αποθηκεύτηκε στη συσκευή σου." });
     } catch {
       toast({
         title: "Σφάλμα αποθήκευσης",
-        description: "Δεν ήταν δυνατή η αποθήκευση. Δοκιμάστε ξανά.",
+        description: "Δεν ήταν δυνατή η αποθήκευση τοπικά.",
         variant: "destructive",
       });
-    } finally {
-      setIsSaving(false);
     }
   };
 
-  const handleDownloadPdf = async () => {
-    toast({ title: "Σύντομα διαθέσιμο", description: "Η λήψη PDF θα προστεθεί άμεσα." });
-  };
-
-  const handleShare = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: "Ο Χρησμός μου",
-          text: reading,
-          url: typeof window !== "undefined" ? window.location.href : undefined,
-        });
-      } else {
-        await navigator.clipboard.writeText(
-          `${reading}\n\n${typeof window !== "undefined" ? window.location.href : ""}`
-        );
-        toast({ title: "Αντιγράφηκε", description: "Ο σύνδεσμος αντιγράφηκε στο πρόχειρο." });
-      }
-    } catch {}
-  };
-
-  const formatReading = (text: string) =>
-    text.split("\n").map((line, i) => {
-      if (/^### \d+\./.test(line)) {
-        return (
-          <h3
-            key={`h-${i}`}
-            className="font-['Playfair_Display'] font-bold text-[#3B1F4A] text-xl mb-2 mt-6 first:mt-0 border-b-2 border-[#E9D5FF] w-fit pb-1"
-          >
-            {line.replace(/^### /, "")}
-          </h3>
-        );
-      }
-      if (/^- /.test(line)) {
-        return (
-          <p key={`li-${i}`} className="font-['Inter'] text-base text-[#3B1F4A] leading-relaxed max-w-[620px] mb-4">
-            {line.replace(/^- /, "")}
-          </p>
-        );
-      }
-      if (line.trim()) {
-        return (
-          <p key={`p-${i}`} className="font-['Inter'] text-base text-[#3B1F4A] leading-relaxed max-w-[620px] mb-4">
-            {line}
-          </p>
-        );
-      }
-      return null;
-    });
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-mystical-purple/10 via-background to-rose-gold/10">
-      <div className="container mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <Button variant="ghost" onClick={onBack} className="text-mystical-purple hover:text-mystical-purple-dark">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Πίσω
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-mystical-purple/20">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Button variant="ghost" onClick={onBack} className="text-mystical-purple">
+            <ArrowLeft className="mr-2 h-5 w-5" />
+            Επιστροφή
           </Button>
-
-          <h1 className="text-2xl font-mystical font-bold text-mystical-purple text-center flex-1">Ο Χρησμός σας</h1>
-
-          <div className="flex gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePlayAudio}
-              aria-pressed={isPlaying}
-              aria-label={isPlaying ? "Διακοπή αφήγησης" : "Αναπαραγωγή αφήγησης"}
-              className="border-mystical-purple text-mystical-purple hover:bg-mystical-purple hover:text-white"
-            >
-              {isPlaying ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-            </Button>
-          </div>
+          <h1 className="text-2xl font-mystical font-bold text-mystical-purple">Ανάγνωση Φλιτζανιού</h1>
+          <div />
         </div>
+      </header>
 
-        {/* Single-column content */}
-        <div className="max-w-3xl mx-auto space-y-8">
-          {/* Reading Card */}
-          <Card className="rounded-2xl shadow-[0_8px_32px_rgba(139,92,246,0.08)] border border-[#E9D5FF] overflow-hidden">
-            <div className="relative" style={{ backgroundColor: "#FAF3E0" }}>
-              <div
-                className="absolute inset-0 rounded-2xl shadow-inner"
-                style={{ boxShadow: "inset 0 0 20px rgba(139, 92, 246, 0.05)" }}
-              />
-              <CardContent className="relative p-8">
-                <div className="text-center mb-8">
-                  <h2 className="font-['Playfair_Display'] text-[26px] font-bold bg-gradient-to-r from-[#8B5CF6] to-[#F472B6] bg-clip-text text-transparent mb-2">
-                    Χρησμός από τη {voiceConfig.name}
-                  </h2>
-                  <p className="font-['Inter'] italic text-[#7E6A8A]">με {voiceConfig.age} φωνή και χρόνια εμπειρίας</p>
-                </div>
-
-                <div className="space-y-4 max-w-[620px] mx-auto">{formatReading(reading)}</div>
-              </CardContent>
-            </div>
-          </Card>
-
-          {/* Cup + Symbols (secondary card) */}
-          <Card className="rounded-2xl border border-[#E9D5FF] bg-white/70">
-            <CardContent className="p-6">
-              <h3 className="font-['Playfair_Display'] font-semibold text-[#3B1F4A] text-lg mb-4">Το Φλιτζάνι & Σύμβολα</h3>
-
-              <div className="flex flex-col items-center gap-6">
-                {/* Cup image or placeholder */}
-                {uploadedImage ? (
-                  <div className="w-full max-w-[260px]">
-                    <img
-                      src={uploadedImage}
-                      alt="Uploaded cup"
-                      className="w-full aspect-square object-cover rounded-xl shadow-lg"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full max-w-[260px] rounded-xl border-2 border-dashed border-[#8B5CF6]/40 bg-[#FBF7FF] p-6 text-center text-sm text-[#7E6A8A]">
-                    Δεν έχει ανέβει εικόνα.
-                  </div>
-                )}
-
-                {/* Symbols */}
-                {detectedSymbols.length > 0 ? (
-                  <div className="w-full flex flex-wrap justify-center gap-2">
-                    {detectedSymbols.map((symbol, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center bg-[#F3E8FF] text-[#3B1F4A] text-sm font-medium rounded-full px-3 py-1"
-                      >
-                        {symbol}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-[#7E6A8A]">Δεν εντοπίστηκαν σύμβολα.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Actions */}
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button
-              onClick={handlePlayAudio}
-              disabled={isPlaying}
-              aria-pressed={isPlaying}
-              className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-semibold rounded-xl px-5 py-3 flex items-center gap-2"
-            >
-              {isPlaying ? (
-                <>
-                  <VolumeX className="h-4 w-4" /> Σταμάτημα
-                </>
-              ) : (
-                <>
-                  <Volume2 className="h-4 w-4" /> Άκου
-                </>
+      <main className="container mx-auto px-4 py-8 max-w-3xl">
+        {/* Info Card */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-mystical-purple">
+              {readerInfo?.name} — <span className="text-muted-foreground">{producedAtLabel}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground space-y-1">
+            {readerInfo?.description && <div>{readerInfo.description}</div>}
+            <div className="flex flex-wrap gap-4">
+              {gender && (
+                <div className="rounded-full bg-mystical-purple/10 px-3 py-1 text-mystical-purple">Φύλο: {gender}</div>
               )}
-            </Button>
+              {ageRange && (
+                <div className="rounded-full bg-mystical-purple/10 px-3 py-1 text-mystical-purple">
+                  Ηλικιακό εύρος: {ageRange}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-            {onSave && (
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                variant="outline"
-                className="bg-white border border-[#8B5CF6]/30 hover:bg-[#F3E8FF] rounded-xl px-5 py-3 flex items-center gap-2"
-              >
-                {isSaving ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-                    Αποθήκευση...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" /> Αποθήκευσε τον Χρησμό
-                  </>
-                )}
+        {/* Reading body */}
+        <Card>
+          <CardContent className="pt-6">
+            <article className="prose prose-sm max-w-none prose-p:leading-relaxed prose-headings:text-mystical-purple">
+              {reading.split("\n").map((line, i) => (
+                <p key={i}>{line.trim()}</p>
+              ))}
+            </article>
+
+            {/* Actions */}
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {!isSpeaking ? (
+                <Button onClick={playTTS} className="w-full">
+                  <Volume2 className="mr-2 h-5 w-5" />
+                  Άκου
+                </Button>
+              ) : (
+                <Button variant="secondary" onClick={stopTTS} className="w-full">
+                  <VolumeX className="mr-2 h-5 w-5" />
+                  Στοπ
+                </Button>
+              )}
+
+              <Button onClick={saveLocally} variant="outline" className="w-full">
+                <Save className="mr-2 h-5 w-5" />
+                Αποθήκευση
               </Button>
-            )}
 
-            <Button
-              variant="outline"
-              onClick={handleDownloadPdf}
-              className="bg-white border border-[#8B5CF6]/30 hover:bg-[#F3E8FF] rounded-xl px-5 py-3 flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" /> Λήψη PDF
-            </Button>
+              <Button onClick={downloadPDF} variant="outline" className="w-full">
+                <Download className="mr-2 h-5 w-5" />
+                Λήψη PDF
+              </Button>
 
-            <Button
-              variant="ghost"
-              onClick={handleShare}
-              className="text-[#3B1F4A] hover:text-[#8B5CF6] flex items-center gap-2"
-            >
-              <Share2 className="h-4 w-4" /> Κοινοποίησε
-            </Button>
-          </div>
-        </div>
-      </div>
+              <Button onClick={shareReading} variant="outline" className="w-full">
+                <Share2 className="mr-2 h-5 w-5" />
+                Κοινοποίηση
+              </Button>
+            </div>
+
+            {/* μικρό helper για clipboard fallback */}
+            <div className="mt-3 text-xs text-muted-foreground flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4" />
+              Αν δεν υποστηρίζεται «Κοινοποίηση», θα γίνει αντιγραφή στο πρόχειρο.
+            </div>
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 };

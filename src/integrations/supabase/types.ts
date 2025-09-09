@@ -92,10 +92,8 @@ export type Database = {
           created_at: string | null
           gender: string | null
           id: string
-          image_path: string | null
           image_url: string | null
           is_public: boolean
-          oracle_text: string | null
           pdf_url: string | null
           persona: string | null
           reader: string | null
@@ -112,10 +110,8 @@ export type Database = {
           created_at?: string | null
           gender?: string | null
           id?: string
-          image_path?: string | null
           image_url?: string | null
           is_public?: boolean
-          oracle_text?: string | null
           pdf_url?: string | null
           persona?: string | null
           reader?: string | null
@@ -132,10 +128,8 @@ export type Database = {
           created_at?: string | null
           gender?: string | null
           id?: string
-          image_path?: string | null
           image_url?: string | null
           is_public?: boolean
-          oracle_text?: string | null
           pdf_url?: string | null
           persona?: string | null
           reader?: string | null
