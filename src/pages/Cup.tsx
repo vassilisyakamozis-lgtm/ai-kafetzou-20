@@ -15,10 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 import { Coffee, Sparkles, ImageIcon } from "lucide-react";
-import AuthRedirectGuard from '@/hooks/AuthRedirectGuard';
-import { SignInWithGoogle, SignOut } from '@/components/AuthButtons';
-import StartReadingButton from '@/components/StartReadingButton';
-
+import AuthRedirectGuard from "@/hooks/AuthRedirectGuard";
+import { SignInWithGoogle, SignOut } from "@/components/AuthButtons";
+import StartReadingButton from "@/components/StartReadingButton";
 
 type CupForm = {
   reader: string;
@@ -83,17 +82,11 @@ export default function Cup() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const [user, setUser] = useState<User | null>(null);
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
 
-  // === Auth hydrate + live updates ===
+  // === Auth hydrate + updates ===
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSessionToken(data.session?.access_token ?? null);
-    });
     supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null));
-
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSessionToken(session?.access_token ?? null);
       setUser(session?.user ?? null);
     });
     return () => sub.subscription.unsubscribe();
@@ -111,7 +104,7 @@ export default function Cup() {
     },
   });
 
-  // preview εικόνας με όμορφο placeholder/πλαίσιο
+  // preview εικόνας
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     form.setValue("image", file);
@@ -123,13 +116,13 @@ export default function Cup() {
     }
   };
 
-  // optional upload στο bucket 'uploads'
+  // upload στο bucket 'uploads'
   const uploadCupImage = async (file: File) => {
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id ?? "anonymous";
     const path = `cups/${uid}/${Date.now()}_${file.name}`;
     const { error } = await supabase.storage.from("uploads").upload(path, file, {
-      upsert: true,
+      upsert: false,
       contentType: file.type || "image/jpeg",
     });
     if (error) throw error;
@@ -138,7 +131,6 @@ export default function Cup() {
   };
 
   const signIn = async () => {
-    // Διάλεξε πάροχο που θες — Google για ευκολία.
     await supabase.auth.signInWithOAuth({ provider: "google" });
   };
 
@@ -150,7 +142,7 @@ export default function Cup() {
   const isFormDisabled = useMemo(() => !user || isLoading, [user, isLoading]);
 
   const onSubmit = async (values: CupForm) => {
-    if (!sessionToken || !user) {
+    if (!user) {
       toast({
         title: "Απαιτείται σύνδεση",
         description: "Συνδέσου για να ξεκινήσεις την ανάγνωση.",
@@ -159,50 +151,48 @@ export default function Cup() {
       return;
     }
 
-    const readerName =
-      readers.find((r) => r.id === values.reader)?.name || "Ρένα η μοντέρνα";
-
-    let image_url: string | null = null;
+    setIsLoading(true);
     try {
+      // 1) Upload εικόνας (προαιρετικό)
+      let image_url: string | null = null;
       if (values.image) {
-        image_url = await uploadCupImage(values.image);
+        try {
+          image_url = await uploadCupImage(values.image);
+        } catch (e: any) {
+          console.warn("Upload image failed:", e?.message ?? e);
+        }
       }
-    } catch (e: any) {
-      console.warn("Upload image failed:", e?.message ?? e);
-    }
 
-    try {
-      setIsLoading(true);
+      // 2) (Προαιρετικά) Edge function για TTS/κείμενο
+      let tts_url: string | null = null;
+      try {
+        const { data, error } = await supabase.functions.invoke("reading", {
+          body: {
+            reader: readers.find((r) => r.id === values.reader)?.name ?? null,
+            category: values.category,
+            mood: values.mood,
+            question: values.question ?? null,
+            image_url,
+            gender: values.gender,
+            age_range: values.age_range,
+          },
+        });
+        if (!error) {
+          tts_url = data?.tts_url ?? null;
+          // αν προσθέσεις στο μέλλον στήλη oracle_text, μπορείς να περάσεις και data?.text
+        }
+      } catch (e) {
+        console.warn("edge function invoke failed:", e);
+      }
 
-      // 1) Edge Function για παραγωγή χρησμού (AUTH απαιτείται)
-      const { data, error } = await supabase.functions.invoke("reading", {
-        body: {
-          reader: readerName,
-          category: values.category,
-          mood: values.mood,
-          question: values.question,
-          image_url,
-          gender: values.gender,
-          age_range: values.age_range,
-        },
-        headers: { Authorization: `Bearer ${sessionToken}` },
-      });
-      if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error ?? "Άγνωστο σφάλμα");
-
-      // 2) Αποθήκευση σε πίνακα `readings` (ώστε να υπάρχει πέρμα)
-      //    Αν δεν υπάρχει ο πίνακας, δες SQL πιο κάτω.
-      const insertPayload = {
-        user_id: user.id,
-        persona: data.persona,
-        profile: data.profile ?? null,
-        category: values.category,
-        mood: values.mood,
-        question: values.question ?? null,
+      // 3) INSERT ΜΟΝΟ με τα υπάρχοντα columns του πίνακα readings
+      const insertPayload: Record<string, any> = {
         image_url,
-        text: data.text,
-        tts_url: data.tts_url ?? null,
-        created_at: data.created_at, // από το function
+        tts_url,
+        pdf_url: null,
+        sentiment: values.mood || null,
+        is_public: false,
+        // ΔΕΝ στέλνουμε user_id — μπαίνει αυτόματα από RLS (default auth.uid())
       };
 
       const { data: row, error: dbErr } = await supabase
@@ -211,18 +201,18 @@ export default function Cup() {
         .select("id")
         .single();
 
-      // 3) Μετάβαση στη σελίδα αποτελέσματος
-      if (!dbErr && row?.id) {
-        navigate(`/reading/${row.id}`);
-      } else {
-        // fallback: πέρασε state αν δεν σώθηκε (να μη χαθεί ο χρησμός)
-        navigate(`/reading`, {
-          state: {
-            fromMemory: true,
-            temp: insertPayload,
-          },
+      if (dbErr) {
+        console.error("insert failed", dbErr);
+        toast({
+          title: "Αποτυχία αποθήκευσης χρησμού",
+          description: dbErr.message,
+          variant: "destructive",
         });
+        return; // Μην κάνεις redirect στην αρχική
       }
+
+      // 4) Επιτυχία → πήγαινε στη σελίδα αποτελέσματος
+      navigate(`/reading/${row.id}`);
     } catch (e: any) {
       toast({ title: "Σφάλμα", description: String(e?.message ?? e), variant: "destructive" });
     } finally {
@@ -276,7 +266,7 @@ export default function Cup() {
       )}
 
       <AuthRedirectGuard />
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         <SignInWithGoogle />
         <SignOut />
       </div>
@@ -438,7 +428,7 @@ export default function Cup() {
                   )}
                 />
 
-                {/* Upload area (πλαίσιο + placeholder + smooth preview) */}
+                {/* Upload area */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Φωτογραφία Φλιτζανιού (προαιρετικό)</CardTitle>
