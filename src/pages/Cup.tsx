@@ -131,8 +131,15 @@ export default function Cup() {
   };
 
   const signIn = async () => {
-    await supabase.auth.signInWithOAuth({ provider: "google" });
-  };
+  await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      // Χρησιμοποιείς Hash Router (βλέπω # στο URL), άρα:
+      redirectTo: `${window.location.origin}/#/cup`,
+    },
+  });
+};
+
 
   const signOut = async () => {
     await supabase.auth.signOut();
