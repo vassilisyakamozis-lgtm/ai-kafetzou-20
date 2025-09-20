@@ -1,26 +1,22 @@
-import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { supabase } from "../supabaseAuth"; // αν το path είναι αλλιώς, προσαρμόσ’ το
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
+export default function ProtectedRoute({ children }: { children: JSX.Element }) {
   const [loading, setLoading] = useState(true);
-  const [hasSession, setHasSession] = useState(false);
+  const [ok, setOk] = useState(false);
 
   useEffect(() => {
-    // τρέχον session
+    let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
-      setHasSession(!!data.session);
+      if (!mounted) return;
+      setOk(!!data.session?.user);
       setLoading(false);
     });
-    // αλλαγές auth
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-      setHasSession(!!session);
-    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setOk(!!s?.user));
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  if (loading) return null;                 // ή βάλε ένα spinner
-  if (!hasSession) return <Navigate to="/auth" replace />;
-
-  return <>{children}</>;
+  if (loading) return null;
+  return ok ? children : <Navigate to="/auth" replace />;
 }
