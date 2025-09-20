@@ -4,19 +4,30 @@ import { supabase } from "@/integrations/supabase/client";
 
 export default function ProtectedRoute({ children }: { children: JSX.Element }) {
   const [loading, setLoading] = useState(true);
-  const [ok, setOk] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(false);
 
   useEffect(() => {
     let mounted = true;
+
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
-      setOk(!!data.session?.user);
+      setIsAuthed(!!data.session?.user);
       setLoading(false);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setOk(!!s?.user));
-    return () => sub.subscription.unsubscribe();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (!mounted) return;
+      setIsAuthed(!!session?.user);
+    });
+
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) return null;
-  return ok ? children : <Navigate to="/auth" replace />;
+
+  // Δεν έχεις ξεχωριστή /auth σελίδα στο router σου, άρα στέλνουμε στην αρχική
+  return isAuthed ? children : <Navigate to="/" replace />;
 }
