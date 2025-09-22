@@ -1,8 +1,1 @@
-{
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/(.*)", "destination": "/" }
-  ],
-  "installCommand": "npm install --no-audit --no-fund",
-  "buildCommand": "npm run build"
-}
+
