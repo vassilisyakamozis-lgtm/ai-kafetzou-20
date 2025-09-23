@@ -1,11 +1,10 @@
 // src/pages/auth/callback.tsx
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function AuthCallback() {
   const nav = useNavigate();
-  const loc = useLocation();
   const [msg, setMsg] = useState("Ολοκλήρωση σύνδεσης...");
 
   useEffect(() => {
@@ -13,8 +12,6 @@ export default function AuthCallback() {
       try {
         const url = new URL(window.location.href);
         const next = url.searchParams.get("next") || "/cup";
-
-        // PKCE / OAuth code exchange
         const { data, error } = await supabase.auth.exchangeCodeForSession(url);
         if (error) throw error;
 
@@ -24,7 +21,6 @@ export default function AuthCallback() {
           return;
         }
 
-        // Αν δεν είναι OAuth, δοκίμασε να πάρεις υπάρχουσα session (π.χ. magic link)
         const { data: s } = await supabase.auth.getSession();
         if (s.session) {
           nav(next, { replace: true });
@@ -38,7 +34,7 @@ export default function AuthCallback() {
         setTimeout(() => nav("/auth", { replace: true }), 1500);
       }
     })();
-  }, [nav, loc.search]);
+  }, [nav]);
 
   return <div className="max-w-md mx-auto p-6 text-center text-sm">{msg}</div>;
 }
