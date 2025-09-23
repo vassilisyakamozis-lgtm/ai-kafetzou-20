@@ -1,67 +1,108 @@
+// src/pages/auth/AuthPage.tsx
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate, Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
-import { useState } from "react";
-import { supabase } from "../supabaseAuth"; // <-- φτιάξαμε το αρχείο supabaseAuth.ts
+function useQuery() {
+  return new URLSearchParams(useLocation().search);
+}
 
 export default function AuthPage() {
+  const query = useQuery();
+  const nav = useNavigate();
+  const next = query.get("next") || "/cup";
+
   const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<"idle"|"loading"|"sent">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [isLogged, setIsLogged] = useState(false);
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setMessage("");
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setIsLogged(!!data.session);
+    });
+  }, []);
 
-    const { error } = await supabase.auth.signInWithOtp({ email });
-    if (error) {
-      setMessage("❌ Σφάλμα: " + error.message);
-    } else {
-      setMessage("📧 Σου στείλαμε σύνδεσμο στο email. Έλεγξε τα εισερχόμενα!");
+  const signInGoogle = async () => {
+    setError(null);
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
+      }
+    });
+  };
+
+  const signInMagicLink = async () => {
+    try {
+      setStatus("loading");
+      setError(null);
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
+        }
+      });
+      if (error) throw error;
+      setStatus("sent");
+    } catch (e: any) {
+      setError(e?.message || "Αποτυχία αποστολής συνδέσμου.");
+      setStatus("idle");
     }
-    setLoading(false);
-  }
+  };
 
-  async function handleLogout() {
+  const signOut = async () => {
     await supabase.auth.signOut();
-    setMessage("Αποσυνδέθηκες.");
-  }
+    setIsLogged(false);
+  };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-50 px-4">
-      <div className="max-w-md w-full bg-white shadow rounded-2xl p-6">
-        <h1 className="text-xl font-semibold mb-4 text-center">Σύνδεση</h1>
+    <div className="max-w-md mx-auto p-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>{isLogged ? "Είσαι συνδεδεμένος/η" : "Σύνδεση"}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && <p className="text-destructive text-sm">{error}</p>}
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Το email σου"
-            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg transition"
-          >
-            {loading ? "Στέλνουμε…" : "Στείλε μου μαγικό link"}
-          </button>
-        </form>
+          {isLogged ? (
+            <>
+              <div className="flex gap-2">
+                <Button onClick={() => location.assign((new URLSearchParams(location.search)).get("next") || "/cup")}>
+                  Συνέχεια
+                </Button>
+                <Button variant="secondary" onClick={signOut}>Αποσύνδεση</Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                <Link to="/">Αρχική</Link>
+              </p>
+            </>
+          ) : (
+            <>
+              <Button className="w-full" onClick={signInGoogle}>
+                Σύνδεση με Google
+              </Button>
 
-        {message && (
-          <div className="mt-4 text-sm text-center text-neutral-700">{message}</div>
-        )}
+              <div className="text-xs text-muted-foreground text-center">ή με μαγικό σύνδεσμο</div>
 
-        <hr className="my-6" />
-
-        <button
-          onClick={handleLogout}
-          className="w-full bg-neutral-200 hover:bg-neutral-300 text-black py-2 rounded-lg transition"
-        >
-          Αποσύνδεση
-        </button>
-      </div>
+              <div className="space-y-2">
+                <input
+                  type="email"
+                  placeholder="email@domain.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full border rounded px-3 py-2"
+                />
+                <Button className="w-full" onClick={signInMagicLink} disabled={status !== "idle"}>
+                  {status === "sent" ? "Εστάλη!" : status === "loading" ? "Αποστολή..." : "Αποστολή συνδέσμου"}
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
