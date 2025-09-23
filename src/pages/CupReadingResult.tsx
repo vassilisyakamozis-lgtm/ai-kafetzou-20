@@ -1,210 +1,155 @@
-
 // src/pages/CupReadingResult.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { Download, Share2, Volume2, Home, ArrowLeft } from "lucide-react";
-import jsPDF from "jspdf";
 
 type ReadingRow = {
   id: string;
   user_id: string;
-  persona: string;
-  profile: string | null;
-  category: string;
-  mood: string;
-  question: string | null;
   image_url: string | null;
-  text: string;
+  persona: string | null;
+  profile: string | null;
+  category: string | null;
+  mood: string | null;
+  question: string | null;
+  text: string | null;
+  message: string | null;
   tts_url: string | null;
   created_at: string;
 };
 
 export default function CupReadingResult() {
-  const { toast } = useToast();
-  const { id } = useParams();
-  const location = useLocation();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [reading, setReading] = useState<ReadingRow | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const stateTemp = (location.state as any)?.temp as Partial<ReadingRow> | undefined;
+  const [status, setStatus] = useState<"idle" | "loading" | "error" | "empty">("idle");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      setIsLoading(true);
+    if (!id) return;
+    (async () => {
       try {
-        if (id) {
-          const { data, error } = await supabase.from("readings").select("*").eq("id", id).single();
-          if (error) throw error;
-          if (!cancelled) setReading(data as unknown as ReadingRow);
-        } else if (stateTemp) {
-          const tmp: ReadingRow = {
-            id: "temp",
-            user_id: "temp",
-            persona: stateTemp.persona || "Ρένα η μοντέρνα",
-            profile: stateTemp.profile ?? null,
-            category: stateTemp.category || "Γενικό Μέλλον",
-            mood: stateTemp.mood || "Ζεστή & ενθαρρυντική",
-            question: stateTemp.question ?? null,
-            image_url: stateTemp.image_url ?? null,
-            text: stateTemp.text || "",
-            tts_url: stateTemp.tts_url ?? null,
-            created_at: stateTemp.created_at || new Date().toISOString(),
-          };
-          if (!cancelled) setReading(tmp);
-        } else {
-          toast({ title: "Δεν βρέθηκε χρησμός", variant: "destructive" });
-          navigate("/cup");
-        }
-      } catch (e: any) {
-        toast({ title: "Σφάλμα", description: String(e?.message ?? e), variant: "destructive" });
-        navigate("/cup");
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
+        setStatus("loading");
+        setError(null);
 
-    load();
-    return () => {
-      cancelled = true;
-    };
+        // Να υπάρχει session, αλλιώς οι RLS θα κόψουν το select
+        const { data: sess } = await supabase.auth.getSession();
+        if (!sess?.session) {
+          setStatus("error");
+          setError("Δεν είσαι συνδεδεμένος/η.");
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("readings")
+          .select(
+            "id,user_id,image_url,persona,profile,category,mood,question,text,message,tts_url,created_at"
+          )
+          .eq("id", id)
+          .maybeSingle();
+
+        if (error) {
+          setStatus("error");
+          setError(error.message);
+          return;
+        }
+        if (!data) {
+          setStatus("empty");
+          return;
+        }
+        setReading(data as ReadingRow);
+        setStatus("idle");
+      } catch (e: any) {
+        setStatus("error");
+        setError(e?.message || "Κάτι πήγε στραβά.");
+      }
+    })();
   }, [id]);
 
-  const dateLabel = useMemo(() => {
-    if (!reading?.created_at) return "";
-    return new Date(reading.created_at).toLocaleString("el-GR");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reading?.created_at]);
-
-  const doPDF = () => {
-    if (!reading) return;
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-
-    const margin = 40;
-    let y = margin;
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text(`Χρησμός - ${reading.persona}`, margin, y);
-    y += 22;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(`Ημερομηνία: ${dateLabel}`, margin, y);
-    y += 18;
-
-    if (reading.profile) {
-      doc.text(`Προφίλ: ${reading.profile}`, margin, y);
-      y += 18;
-    }
-
-    doc.text(`Θεματική: ${reading.category} | Στυλ: ${reading.mood}`, margin, y);
-    y += 18;
-
-    if (reading.question) {
-      const q = `Ερώτηση: ${reading.question}`;
-      const lines = doc.splitTextToSize(q, 515);
-      doc.text(lines, margin, y);
-      y += 16 * lines.length + 6;
-    }
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(13);
-    doc.text("Κείμενο χρησμού", margin, y);
-    y += 18;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    const lines = doc.splitTextToSize(reading.text, 515);
-    doc.text(lines, margin, y);
-
-    doc.save(`xrhsmos_${new Date(reading.created_at).getTime()}.pdf`);
-  };
-
-  const doShare = async () => {
-    if (id && navigator.share) {
-      try {
-        await navigator.share({
-          title: "Ο χρησμός μου",
-          text: "Δες τον χρησμό μου ☕",
-          url: `${window.location.origin}/reading/${id}`,
-        });
-      } catch {
-        /* cancelled */
-      }
-    } else {
-      await navigator.clipboard.writeText(window.location.href);
-      toast({ title: "Αντιγράφηκε το link!" });
-    }
-  };
-
-  if (isLoading || !reading) {
+  if (status === "loading") {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-3xl">
-        <div className="text-center text-muted-foreground">Φόρτωση…</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-primary font-medium">
-            <Home className="h-5 w-5" />
-            Home
-          </Link>
-          <div className="text-sm text-muted-foreground">Ημερομηνία: {dateLabel}</div>
-          <Link to="/cup" className="text-primary flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Νέα Ανάγνωση
-          </Link>
-        </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="max-w-3xl mx-auto p-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-primary">
-              {reading.persona} — {reading.category} ({reading.mood})
-            </CardTitle>
+            <CardTitle>Φορτώνει η ανάγνωση…</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {reading.question && (
-              <div className="text-sm text-muted-foreground">
-                <b>Ερώτηση:</b> {reading.question}
-              </div>
-            )}
-
-            <div className="whitespace-pre-wrap leading-relaxed">{reading.text}</div>
-
-            <div className="flex flex-wrap gap-2 pt-2">
-              {reading.tts_url && (
-                <Button variant="secondary" asChild>
-                  <a href={reading.tts_url} target="_blank" rel="noreferrer">
-                    <Volume2 className="h-4 w-4 mr-2" />
-                    Άκουσε (TTS)
-                  </a>
-                </Button>
-              )}
-              <Button variant="outline" onClick={doPDF}>
-                <Download className="h-4 w-4 mr-2" />
-                Κατέβασμα PDF
-              </Button>
-              <Button onClick={doShare}>
-                <Share2 className="h-4 w-4 mr-2" />
-                Κοινοποίηση
-              </Button>
+          <CardContent>
+            <div className="animate-pulse space-y-3">
+              <div className="h-64 bg-muted rounded-xl" />
+              <div className="h-4 bg-muted rounded" />
+              <div className="h-4 bg-muted rounded w-2/3" />
             </div>
           </CardContent>
         </Card>
       </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="max-w-2xl mx-auto p-6 text-center">
+        <p className="mb-4 text-destructive">Σφάλμα: {error}</p>
+        <Button onClick={() => navigate("/cup")}>Πίσω στο φλυτζάνι</Button>
+      </div>
+    );
+  }
+
+  if (status === "empty" || !reading) {
+    return (
+      <div className="max-w-2xl mx-auto p-6 text-center">
+        <p className="mb-4">Δεν βρέθηκε ανάγνωση ή δεν έχεις δικαίωμα πρόσβασης.</p>
+        <Button asChild>
+          <Link to="/cup">Πίσω στο φλυτζάνι</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const txt = reading.text || reading.message || "(χωρίς κείμενο)";
+
+  return (
+    <div className="max-w-3xl mx-auto p-6">
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Αποτέλεσμα Ανάγνωσης</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {reading.image_url && (
+            <img
+              src={reading.image_url}
+              alt="Καφές"
+              className="w-full max-h-[480px] object-contain rounded-xl border"
+            />
+          )}
+
+          <div className="text-sm text-muted-foreground">
+            <span className="mr-3">Κατηγορία: {reading.category || "—"}</span>
+            <span className="mr-3">Περσόνα: {reading.persona || reading.profile || "—"}</span>
+            <span>Συναίσθημα: {reading.mood || "—"}</span>
+          </div>
+
+          {reading.question && (
+            <p className="text-sm italic text-muted-foreground">Ερώτηση: {reading.question}</p>
+          )}
+
+          <p className="whitespace-pre-wrap leading-7">{txt}</p>
+
+          {reading.tts_url && (
+            <audio controls className="w-full">
+              <source src={reading.tts_url} type="audio/mpeg" />
+              Ο περιηγητής σου δεν υποστηρίζει audio.
+            </audio>
+          )}
+
+          <div className="pt-2">
+            <Button asChild variant="secondary">
+              <Link to="/cup">Νέα ανάγνωση</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
