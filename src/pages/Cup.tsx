@@ -53,42 +53,48 @@ export default function Cup() {
       const image_url = await uploadToCups(file);
 
       setStep("Κλήση Vision + TTS…");
-const resp = await fetch("/api/generate-reading", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    image_url,
-    persona,
-    topic,
-    mood,
-    question: question || null,
-    user_id: user.id,
-  }),
-});
+      const resp = await fetch("/api/generate-reading", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image_url,
+          persona,
+          topic,
+          mood,
+          question: question || null,
+          user_id: user.id,
+        }),
+      });
 
-// parse με ασφάλεια: πρώτα text, μετά προσπάθεια για JSON
-const raw = await resp.text();
-let json: any = null;
-try {
-  json = raw ? JSON.parse(raw) : null;
-} catch {
-  // όχι JSON – θα δείξουμε το κείμενο όπως είναι
-}
+      // Ασφαλές parsing: πρώτα text, μετά JSON αν γίνεται
+      const raw = await resp.text();
+      let json: any = null;
+      try {
+        json = raw ? JSON.parse(raw) : null;
+      } catch {
+        /* ignore non-JSON */
+      }
 
-if (!resp.ok) {
-  const msg =
-    (json && (json.error || json.message || json.detail)) ||
-    raw ||
-    `API error ${resp.status}`;
-  throw new Error(msg);
-}
-if (!json || !json.id) {
-  throw new Error("Άδεια ή μη έγκυρη απάντηση από το API.");
-}
+      if (!resp.ok) {
+        const msg =
+          (json && (json.error || json.message || json.detail)) ||
+          raw ||
+          `API error ${resp.status}`;
+        throw new Error(msg);
+      }
+      if (!json || !json.id) {
+        throw new Error("Άδεια ή μη έγκυρη απάντηση από το API.");
+      }
 
-setStep("Μετάβαση στο αποτέλεσμα…");
-nav(`/cup-reading/${json.id}`);
-
+      setStep("Μετάβαση στο αποτέλεσμα…");
+      nav(`/cup-reading/${json.id}`);
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+      setStep("Σφάλμα");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="max-w-xl mx-auto p-6 space-y-4">
@@ -96,7 +102,6 @@ nav(`/cup-reading/${json.id}`);
       {userEmail && (
         <p className="text-sm opacity-70">Συνδεδεμένος ως {userEmail}</p>
       )}
-      {/* ΒΓΗΚΕ το παλιό: “Απαιτείται σύνδεση χρήστη.” */}
 
       <input
         type="file"
@@ -108,8 +113,11 @@ nav(`/cup-reading/${json.id}`);
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <label className="block">
           <span className="text-sm">Περσόνα</span>
-          <select className="w-full border rounded-xl px-3 py-2"
-                  value={persona} onChange={(e) => setPersona(e.target.value)}>
+          <select
+            className="w-full border rounded-xl px-3 py-2"
+            value={persona}
+            onChange={(e) => setPersona(e.target.value)}
+          >
             <option value="young">Νεαρή</option>
             <option value="middle">Μεσήλικα</option>
             <option value="classic">Παραδοσιακή</option>
@@ -118,8 +126,11 @@ nav(`/cup-reading/${json.id}`);
 
         <label className="block">
           <span className="text-sm">Θεματική</span>
-          <select className="w-full border rounded-xl px-3 py-2"
-                  value={topic} onChange={(e) => setTopic(e.target.value)}>
+          <select
+            className="w-full border rounded-xl px-3 py-2"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+          >
             <option value="general">Γενικά</option>
             <option value="love">Ερωτικά</option>
             <option value="career">Επαγγελματικά</option>
@@ -131,8 +142,11 @@ nav(`/cup-reading/${json.id}`);
 
       <label className="block">
         <span className="text-sm">Διάθεση</span>
-        <select className="w-full border rounded-xl px-3 py-2"
-                value={mood} onChange={(e) => setMood(e.target.value)}>
+        <select
+          className="w-full border rounded-xl px-3 py-2"
+          value={mood}
+          onChange={(e) => setMood(e.target.value)}
+        >
           <option value="neutral">Ήρεμη</option>
           <option value="optimistic">Αισιόδοξη</option>
           <option value="worried">Αγχωμένη</option>
@@ -143,7 +157,8 @@ nav(`/cup-reading/${json.id}`);
         <span className="text-sm">Ερώτηση (προαιρετική)</span>
         <input
           className="w-full border rounded-xl px-3 py-2"
-          value={question} onChange={(e) => setQuestion(e.target.value)}
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
           placeholder="Τι σε απασχολεί;"
         />
       </label>
