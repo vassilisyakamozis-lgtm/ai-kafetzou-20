@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import Header from "@/components/Header";
 
 // Pages
-import Home from "@/pages/Home";                  // η αρχική
-import Auth from "@/pages/Auth";                  // login/register
-import Cup from "@/pages/Cup";                    // φόρμα/κουμπί "Ξεκίνα την ανάγνωση"
-import CupReadingResult from "@/pages/CupReadingResult"; // /cup-reading/:id
+import Home from "@/pages/Home";
+import Auth from "@/pages/Auth";
+import Cup from "@/pages/Cup";
+import CupReadingResult from "@/pages/CupReadingResult";
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const [loading, setLoading] = useState(true);
@@ -15,8 +16,7 @@ function RequireAuth({ children }: { children: JSX.Element }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      setIsAuthed(!!data.session);
-      setLoading(false);
+      setIsAuthed(!!data.session); setLoading(false);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setIsAuthed(!!session);
@@ -26,7 +26,6 @@ function RequireAuth({ children }: { children: JSX.Element }) {
 
   if (loading) return null;
   if (!isAuthed) {
-    // κρατάμε target για επιστροφή μετά το login
     const to = `/auth?redirect=${encodeURIComponent(location.pathname + location.search)}`;
     return <Navigate to={to} replace />;
   }
@@ -35,26 +34,15 @@ function RequireAuth({ children }: { children: JSX.Element }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/auth" element={<Auth />} />
-      <Route
-        path="/cup"
-        element={
-          <RequireAuth>
-            <Cup />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/cup-reading/:id"
-        element={
-          <RequireAuth>
-            <CupReadingResult />
-          </RequireAuth>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <Header />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/cup" element={<RequireAuth><Cup /></RequireAuth>} />
+        <Route path="/cup-reading/:id" element={<RequireAuth><CupReadingResult /></RequireAuth>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 }
