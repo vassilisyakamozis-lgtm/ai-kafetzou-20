@@ -12,21 +12,24 @@ export default function Cup() {
       setBusy(true);
       setError(null);
 
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData.user;
-      if (!user) throw new Error("Δεν υπάρχει session.");
+      const { data: userData, error: uErr } = await supabase.auth.getUser();
+      if (uErr) throw uErr;
+      const user = userData?.user;
+      if (!user) throw new Error("Δεν υπάρχει ενεργό session χρήστη.");
 
-      // Προσωρινό dummy “AI” βήμα (μέχρι να κουμπώσει Vision/TTS)
+      // DUMMY περιεχόμενο για να τεστάρουμε όλη τη ροή
       const payload = {
         user_id: user.id,
-        persona: "middle",      // TODO: από UI επιλογές
-        topic: "general",       // TODO: από UI επιλογές
-        mood: "neutral",        // TODO: από UI επιλογές
-        question: null,         // TODO: από UI
+        persona: "middle",
+        topic: "general",
+        mood: "neutral",
+        question: null,
         text: "Προσωρινός χρησμός για δοκιμή ροής.",
         tts_url: null,
         is_public: false,
       };
+
+      console.debug("[Cup] inserting payload", payload);
 
       const { data, error } = await supabase
         .from("readings")
@@ -34,10 +37,15 @@ export default function Cup() {
         .select("id")
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("[Cup] insert error", error);
+        throw error;
+      }
+      console.debug("[Cup] created reading id", data.id);
+
       nav(`/cup-reading/${data.id}`);
     } catch (e: any) {
-      setError(e.message);
+      setError(e?.message ?? String(e));
     } finally {
       setBusy(false);
     }
@@ -47,6 +55,7 @@ export default function Cup() {
     <div className="max-w-xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-4">Ξεκίνα την Ανάγνωση</h1>
       <p className="mb-4 text-sm opacity-80">Απαιτείται σύνδεση χρήστη.</p>
+
       <button
         onClick={startReading}
         disabled={busy}
@@ -54,6 +63,7 @@ export default function Cup() {
       >
         {busy ? "Δημιουργία..." : "Ξεκίνα τώρα"}
       </button>
+
       {error && <p className="mt-3 text-red-600 text-sm">{error}</p>}
     </div>
   );
