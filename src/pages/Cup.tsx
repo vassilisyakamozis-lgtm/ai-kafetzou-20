@@ -35,7 +35,7 @@ export default function Cup() {
         .single();
 
       if (error) throw error;
-      nav(`/reading/${data.id}`);
+      nav(`/cup-reading/${data.id}`);
     } catch (e: any) {
       setError(e.message);
     } finally {
