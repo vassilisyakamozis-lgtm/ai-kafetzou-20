@@ -1,7 +1,13 @@
-// api/generate-reading.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
+
+function setCors(res: VercelResponse) {
+  // Same-origin δεν χρειάζεται CORS, αλλά το βάζουμε για σιγουριά
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS, GET");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+}
 
 const must = (name: string) => {
   const v = process.env[name];
@@ -11,8 +17,20 @@ const must = (name: string) => {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
+    setCors(res);
+
+    // Προχειρη υγεία: Αν υπάρξει preflight
+    if (req.method === "OPTIONS") return res.status(200).end();
+
+    // GET = healthcheck
+    if (req.method === "GET") {
+      return res.status(200).json({ ok: true, hint: "POST a JSON body to generate a reading." });
+    }
+
+    // Από εδώ και κάτω είναι το κανονικό flow (POST)
     if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method not allowed" });
+      // Δεν ρίχνουμε 405 πια για να μην μπερδεύει — απαντάμε ομαλά
+      return res.status(200).json({ ok: true, method: req.method });
     }
 
     const OPENAI_API_KEY = must("OPENAI_API_KEY");
@@ -22,7 +40,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const { image_url, persona, topic, mood, question, user_id } = req.body || {};
+    // Σε Vercel Node Functions, το req.body είναι ήδη parsed (αν είναι JSON).
+    const { image_url, persona, topic, mood, question, user_id } = (req.body as any) || {};
     if (!image_url || !user_id) {
       return res.status(400).json({ error: "Missing image_url or user_id" });
     }
@@ -63,13 +82,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         contentType: "audio/mpeg",
         upsert: false,
       });
-      if (put.error) {
-        console.error("Upload TTS error:", put.error);
-      } else {
+      if (!put.error) {
         ttsUrl = supabase.storage.from("tts").getPublicUrl(put.data.path).data.publicUrl;
       }
-    } catch (e: any) {
-      console.error("TTS failed:", e?.message || e);
+    } catch (e) {
+      console.error("TTS failed:", e);
       // συνεχίζουμε μόνο με κείμενο
     }
 
@@ -97,7 +114,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ id: ins.data.id });
   } catch (err: any) {
     console.error("API fatal error:", err?.message || err);
-    // Εγγυημένο JSON error (ποτέ κενό σώμα)
+    setCors(res);
     return res.status(500).json({ error: err?.message || "Server error" });
   }
 }
