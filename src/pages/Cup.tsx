@@ -53,31 +53,42 @@ export default function Cup() {
       const image_url = await uploadToCups(file);
 
       setStep("Κλήση Vision + TTS…");
-      const resp = await fetch("/api/generate-reading", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image_url,
-          persona,
-          topic,
-          mood,
-          question: question || null,
-          user_id: user.id,
-        }),
-      });
+const resp = await fetch("/api/generate-reading", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    image_url,
+    persona,
+    topic,
+    mood,
+    question: question || null,
+    user_id: user.id,
+  }),
+});
 
-      const json = await resp.json();
-      if (!resp.ok) throw new Error(json?.error || "Αποτυχία δημιουργίας χρησμού.");
+// parse με ασφάλεια: πρώτα text, μετά προσπάθεια για JSON
+const raw = await resp.text();
+let json: any = null;
+try {
+  json = raw ? JSON.parse(raw) : null;
+} catch {
+  // όχι JSON – θα δείξουμε το κείμενο όπως είναι
+}
 
-      setStep("Μετάβαση στο αποτέλεσμα…");
-      nav(`/cup-reading/${json.id}`);
-    } catch (e: any) {
-      setError(e?.message ?? String(e));
-      setStep("Σφάλμα");
-    } finally {
-      setBusy(false);
-    }
-  };
+if (!resp.ok) {
+  const msg =
+    (json && (json.error || json.message || json.detail)) ||
+    raw ||
+    `API error ${resp.status}`;
+  throw new Error(msg);
+}
+if (!json || !json.id) {
+  throw new Error("Άδεια ή μη έγκυρη απάντηση από το API.");
+}
+
+setStep("Μετάβαση στο αποτέλεσμα…");
+nav(`/cup-reading/${json.id}`);
+
 
   return (
     <div className="max-w-xl mx-auto p-6 space-y-4">
