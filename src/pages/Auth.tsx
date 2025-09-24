@@ -6,10 +6,8 @@ export default function Auth() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [busy, setBusy] = useState(false);
-
   const redirect = params.get("redirect") || "/cup";
 
-  // Αν υπάρχει ήδη session, φεύγουμε
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate(redirect, { replace: true });
@@ -18,7 +16,7 @@ export default function Auth() {
 
   const signInWithGoogle = useCallback(async () => {
     setBusy(true);
-    const site = import.meta.env.VITE_SITE_URL;
+    const site = import.meta.env.VITE_SITE_URL || window.location.origin;
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -33,12 +31,11 @@ export default function Auth() {
     await supabase.auth.signOut();
   }, []);
 
-  // Όταν η Supabase μας επιστρέψει στο /auth, θα υπάρχει session -> redirect
   useEffect(() => {
-    const sub = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       if (session) navigate(redirect, { replace: true });
     });
-    return () => sub.data.subscription.unsubscribe();
+    return () => sub.subscription.unsubscribe();
   }, [navigate, redirect]);
 
   return (
@@ -51,7 +48,9 @@ export default function Auth() {
       >
         {busy ? "Σύνδεση..." : "Συνέχεια με Google"}
       </button>
-      <button onClick={signOut} className="mt-3 text-sm underline">Αποσύνδεση</button>
+      <button onClick={signOut} className="mt-3 text-sm underline">
+        Αποσύνδεση
+      </button>
     </div>
   );
 }
