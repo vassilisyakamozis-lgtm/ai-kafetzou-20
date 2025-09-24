@@ -1,118 +1,60 @@
-// src/pages/Cup.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Cup() {
-  const navigate = useNavigate();
-  const [file, setFile] = useState<File | null>(null);
-  const [category, setCategory] = useState("general");
-  const [persona, setPersona] = useState("κλασική καφετζού");
-  const [mood, setMood] = useState("ουδέτερο");
-  const [loading, setLoading] = useState(false);
+  const nav = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function start() {
+  const startReading = async () => {
     try {
-      setLoading(true);
+      setBusy(true);
+      setError(null);
 
-      // check session
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) {
-        alert("Χρειάζεται σύνδεση.");
-        return navigate("/auth");
-      }
-      // file required
-      if (!file) {
-        alert("Επίλεξε εικόνα φλυτζανιού.");
-        return;
-      }
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData.user;
+      if (!user) throw new Error("Δεν υπάρχει session.");
 
-      // upload to Storage (public bucket 'cups')
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `${u.user.id}/${Date.now()}.${ext}`;
-      const up = await supabase.storage.from("cups").upload(path, file, {
-        contentType: file.type || "image/jpeg",
-        upsert: true,
-      });
-      if (up.error) {
-        alert("Αποτυχία upload: " + up.error.message);
-        return;
-      }
-      const pub = supabase.storage.from("cups").getPublicUrl(path);
-      const image_url = pub.data.publicUrl;
+      // Προσωρινό dummy “AI” βήμα (μέχρι να κουμπώσει Vision/TTS)
+      const payload = {
+        user_id: user.id,
+        persona: "middle",      // TODO: από UI επιλογές
+        topic: "general",       // TODO: από UI επιλογές
+        mood: "neutral",        // TODO: από UI επιλογές
+        question: null,         // TODO: από UI
+        text: "Προσωρινός χρησμός για δοκιμή ροής.",
+        tts_url: null,
+        is_public: false,
+      };
 
-      // supabase access token -> backend
-      const { data: s } = await supabase.auth.getSession();
-      const token = s?.session?.access_token;
-      if (!token) {
-        alert("Δεν βρέθηκε session token.");
-        return;
-      }
+      const { data, error } = await supabase
+        .from("readings")
+        .insert(payload)
+        .select("id")
+        .single();
 
-      // call /api/analyze
-      const resp = await fetch("/api/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ image_url, category, persona, mood }),
-      });
-      const json = await resp.json();
-      if (!resp.ok) {
-        alert("Σφάλμα API: " + (json?.error || resp.statusText));
-        return;
-      }
-      navigate(`/reading/${json.id}`);
+      if (error) throw error;
+      nav(`/reading/${data.id}`);
     } catch (e: any) {
-      alert(e?.message || "Σφάλμα.");
+      setError(e.message);
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  }
+  };
 
   return (
-    <div style={{ maxWidth: 720, margin: "40px auto" }}>
-      <h1>Ανάγνωση Φλυτζανιού</h1>
-
-      <div style={{ marginTop: 16 }}>
-        <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 12 }}>
-        <div>
-          <label>Κατηγορία</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} style={{ width: "100%" }}>
-            <option value="general">Γενικά</option>
-            <option value="love">Ερωτικά</option>
-            <option value="career">Επαγγελματικά</option>
-            <option value="luck">Τύχη</option>
-            <option value="family">Οικογενειακά</option>
-          </select>
-        </div>
-        <div>
-          <label>Περσόνα</label>
-          <select value={persona} onChange={(e) => setPersona(e.target.value)} style={{ width: "100%" }}>
-            <option>κλασική καφετζού</option>
-            <option>μοντέρνα μάντισσα</option>
-            <option>μυστικιστική αφηγήτρια</option>
-          </select>
-        </div>
-        <div>
-          <label>Συναίσθημα</label>
-          <select value={mood} onChange={(e) => setMood(e.target.value)} style={{ width: "100%" }}>
-            <option>ουδέτερο</option>
-            <option>αγχωμένος</option>
-            <option>ελπιδοφόρος</option>
-            <option>στεναχωρημένος</option>
-            <option>ενθουσιασμένος</option>
-          </select>
-        </div>
-      </div>
-
-      <button onClick={start} disabled={loading} style={{ marginTop: 16 }}>
-        {loading ? "Γίνεται ανάλυση..." : "Ξεκίνα Ανάγνωση"}
+    <div className="max-w-xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-4">Ξεκίνα την Ανάγνωση</h1>
+      <p className="mb-4 text-sm opacity-80">Απαιτείται σύνδεση χρήστη.</p>
+      <button
+        onClick={startReading}
+        disabled={busy}
+        className="rounded-2xl px-5 py-3 border"
+      >
+        {busy ? "Δημιουργία..." : "Ξεκίνα τώρα"}
       </button>
+      {error && <p className="mt-3 text-red-600 text-sm">{error}</p>}
     </div>
   );
 }
