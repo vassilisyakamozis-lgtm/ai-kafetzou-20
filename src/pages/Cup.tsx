@@ -1,70 +1,151 @@
-import { useState } from "react";
+// src/pages/Cup.tsx
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Cup() {
   const nav = useNavigate();
+
+  // δείχνουμε το email για επιβεβαίωση ότι είμαστε logged-in
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUserEmail(session?.user?.email ?? null);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const [file, setFile] = useState<File | null>(null);
+  const [persona, setPersona] = useState("middle");
+  const [topic, setTopic] = useState("general");
+  const [mood, setMood] = useState("neutral");
+  const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState("Έτοιμο");
   const [error, setError] = useState<string | null>(null);
+
+  const uploadToCups = async (f: File) => {
+    const ext = f.name.split(".").pop() || "jpg";
+    const path = `cup_${Date.now()}.${ext}`;
+    const { data, error } = await supabase.storage.from("cups").upload(path, f, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: f.type || "image/jpeg",
+    });
+    if (error) throw error;
+    return supabase.storage.from("cups").getPublicUrl(data.path).data.publicUrl;
+  };
 
   const startReading = async () => {
     try {
       setBusy(true);
       setError(null);
+      setStep("Έλεγχος χρήστη…");
 
       const { data: userData, error: uErr } = await supabase.auth.getUser();
       if (uErr) throw uErr;
       const user = userData?.user;
       if (!user) throw new Error("Δεν υπάρχει ενεργό session χρήστη.");
+      if (!file) throw new Error("Επέλεξε μια φωτογραφία φλιτζανιού.");
 
-      // DUMMY περιεχόμενο για να τεστάρουμε όλη τη ροή
-      const payload = {
-        user_id: user.id,
-        persona: "middle",
-        topic: "general",
-        mood: "neutral",
-        question: null,
-        text: "Προσωρινός χρησμός για δοκιμή ροής.",
-        tts_url: null,
-        is_public: false,
-      };
+      setStep("Ανέβασμα εικόνας…");
+      const image_url = await uploadToCups(file);
 
-      console.debug("[Cup] inserting payload", payload);
+      setStep("Κλήση Vision + TTS…");
+      const resp = await fetch("/api/generate-reading", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image_url,
+          persona,
+          topic,
+          mood,
+          question: question || null,
+          user_id: user.id,
+        }),
+      });
 
-      const { data, error } = await supabase
-        .from("readings")
-        .insert(payload)
-        .select("id")
-        .single();
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json?.error || "Αποτυχία δημιουργίας χρησμού.");
 
-      if (error) {
-        console.error("[Cup] insert error", error);
-        throw error;
-      }
-      console.debug("[Cup] created reading id", data.id);
-
-      nav(`/cup-reading/${data.id}`);
+      setStep("Μετάβαση στο αποτέλεσμα…");
+      nav(`/cup-reading/${json.id}`);
     } catch (e: any) {
       setError(e?.message ?? String(e));
+      setStep("Σφάλμα");
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Ξεκίνα την Ανάγνωση</h1>
-      <p className="mb-4 text-sm opacity-80">Απαιτείται σύνδεση χρήστη.</p>
+    <div className="max-w-xl mx-auto p-6 space-y-4">
+      <h1 className="text-2xl font-bold">Ξεκίνα την Ανάγνωση</h1>
+      {userEmail && (
+        <p className="text-sm opacity-70">Συνδεδεμένος ως {userEmail}</p>
+      )}
+      {/* ΒΓΗΚΕ το παλιό: “Απαιτείται σύνδεση χρήστη.” */}
+
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
+        className="block"
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label className="block">
+          <span className="text-sm">Περσόνα</span>
+          <select className="w-full border rounded-xl px-3 py-2"
+                  value={persona} onChange={(e) => setPersona(e.target.value)}>
+            <option value="young">Νεαρή</option>
+            <option value="middle">Μεσήλικα</option>
+            <option value="classic">Παραδοσιακή</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="text-sm">Θεματική</span>
+          <select className="w-full border rounded-xl px-3 py-2"
+                  value={topic} onChange={(e) => setTopic(e.target.value)}>
+            <option value="general">Γενικά</option>
+            <option value="love">Ερωτικά</option>
+            <option value="career">Επαγγελματικά</option>
+            <option value="luck">Τύχη</option>
+            <option value="family">Οικογενειακά</option>
+          </select>
+        </label>
+      </div>
+
+      <label className="block">
+        <span className="text-sm">Διάθεση</span>
+        <select className="w-full border rounded-xl px-3 py-2"
+                value={mood} onChange={(e) => setMood(e.target.value)}>
+          <option value="neutral">Ήρεμη</option>
+          <option value="optimistic">Αισιόδοξη</option>
+          <option value="worried">Αγχωμένη</option>
+        </select>
+      </label>
+
+      <label className="block">
+        <span className="text-sm">Ερώτηση (προαιρετική)</span>
+        <input
+          className="w-full border rounded-xl px-3 py-2"
+          value={question} onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Τι σε απασχολεί;"
+        />
+      </label>
 
       <button
         onClick={startReading}
         disabled={busy}
         className="rounded-2xl px-5 py-3 border"
       >
-        {busy ? "Δημιουργία..." : "Ξεκίνα τώρα"}
+        {busy ? `Δημιουργία… (${step})` : "Ξεκίνα τώρα"}
       </button>
 
-      {error && <p className="mt-3 text-red-600 text-sm">{error}</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }
