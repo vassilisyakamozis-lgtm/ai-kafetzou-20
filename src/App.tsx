@@ -3,10 +3,10 @@ import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 // Pages
-import Home from "@/pages/Home";           // η αρχική
-import Auth from "@/pages/Auth";           // login/register
-import Cup from "@/pages/Cup";             // φόρμα/κουμπί "Ξεκίνα την ανάγνωση"
-import ReadingResult from "@/pages/ReadingResult"; // /reading/:id
+import Home from "@/pages/Home";                  // η αρχική
+import Auth from "@/pages/Auth";                  // login/register
+import Cup from "@/pages/Cup";                    // φόρμα/κουμπί "Ξεκίνα την ανάγνωση"
+import CupReadingResult from "@/pages/CupReadingResult"; // /cup-reading/:id
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const [loading, setLoading] = useState(true);
@@ -47,10 +47,10 @@ export default function App() {
         }
       />
       <Route
-        path="/reading/:id"
+        path="/cup-reading/:id"
         element={
           <RequireAuth>
-            <ReadingResult />
+            <CupReadingResult />
           </RequireAuth>
         }
       />
