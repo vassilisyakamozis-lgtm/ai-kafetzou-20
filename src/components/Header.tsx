@@ -1,110 +1,53 @@
-import { Button } from "@/components/ui/button";
-import { Crown, Sparkles, LogOut, User } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import logoIcon from "@/assets/logo-icon.png";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import type { User } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 
-const Header = () => {
-  const { user, profile, signOut } = useAuth();
+export default function Header() {
+  const [user, setUser] = useState<User | null>(null);
+  const loc = useLocation();
+  const nav = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const goAuth = () => {
+    const redirect = encodeURIComponent(loc.pathname + loc.search);
+    nav(`/auth?redirect=${redirect}`);
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    nav("/");
+  };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-mystical-purple/20">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3">
-            <div className="relative">
-              <img src="/lovable-uploads/bb07a43a-7bc4-4220-b603-524ea88d69e1.png" alt="Ai Kafetzou" className="h-8 w-8 animate-mystical-glow" />
-            </div>
-            <div>
-              <h1 className="text-xl font-mystical font-bold text-mystical-purple">
-                AI Kafetzou
-              </h1>
-              <p className="text-xs text-muted-foreground -mt-1">Mystical Oracle</p>
-            </div>
-          </Link>
-
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <a href="#features" className="text-foreground hover:text-mystical-purple transition-colors">
-              Χαρακτηριστικά
-            </a>
-            <a href="#readers" className="text-foreground hover:text-mystical-purple transition-colors">
-              Καφετζούδες
-            </a>
-            <Link to="/cup" className="text-foreground hover:text-mystical-purple transition-colors">
-              Φλιτζάνι
-            </Link>
-            <a href="#pricing" className="text-foreground hover:text-mystical-purple transition-colors">
-              Τιμές
-            </a>
-          </nav>
-
-          {/* Auth Section */}
-          <div className="flex items-center space-x-3">
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={profile?.avatar_url || ''} alt={profile?.display_name || ''} />
-                      <AvatarFallback>
-                        {profile?.display_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {profile?.display_name || 'Χρήστης'}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user.email}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Προφίλ</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => signOut()}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Αποσύνδεση</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <>
-                <Link to="/auth">
-                  <Button variant="ghost" size="sm">
-                    Σύνδεση
-                  </Button>
-                </Link>
-                <Link to="/auth">
-                  <Button variant="mystical" size="sm">
-                    Εγγραφή
-                  </Button>
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
+    <header className="w-full sticky top-0 z-40 bg-white/70 backdrop-blur border-b">
+      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+        <Link to="/" className="font-bold">AI Kafetzou</Link>
+        <nav className="flex items-center gap-3">
+          <Link to="/cup" className="px-3 py-2 rounded-xl border">Σελίδα Ανάγνωσης</Link>
+          {user ? (
+            <>
+              <span className="text-sm opacity-70 hidden sm:inline">
+                {user.email}
+              </span>
+              <button onClick={signOut} className="px-3 py-2 rounded-xl border">
+                Αποσύνδεση
+              </button>
+            </>
+          ) : (
+            <button onClick={goAuth} className="px-3 py-2 rounded-xl border">
+              Σύνδεση / Εγγραφή
+            </button>
+          )}
+        </nav>
       </div>
     </header>
   );
-};
-
-export default Header;
+}
