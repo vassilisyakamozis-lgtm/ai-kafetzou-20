@@ -3,10 +3,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-export default function Cup() {
+function Cup() {
   const nav = useNavigate();
 
-  // δείχνουμε το email για επιβεβαίωση ότι είμαστε logged-in
   const [userEmail, setUserEmail] = useState<string | null>(null);
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? null));
@@ -66,13 +65,12 @@ export default function Cup() {
         }),
       });
 
-      // Ασφαλές parsing: πρώτα text, μετά JSON αν γίνεται
       const raw = await resp.text();
       let json: any = null;
       try {
         json = raw ? JSON.parse(raw) : null;
       } catch {
-        /* ignore non-JSON */
+        /* ignore */
       }
 
       if (!resp.ok) {
@@ -99,9 +97,7 @@ export default function Cup() {
   return (
     <div className="max-w-xl mx-auto p-6 space-y-4">
       <h1 className="text-2xl font-bold">Ξεκίνα την Ανάγνωση</h1>
-      {userEmail && (
-        <p className="text-sm opacity-70">Συνδεδεμένος ως {userEmail}</p>
-      )}
+      {userEmail && <p className="text-sm opacity-70">Συνδεδεμένος ως {userEmail}</p>}
 
       <input
         type="file"
@@ -175,3 +171,5 @@ export default function Cup() {
     </div>
   );
 }
+
+export default Cup;
